@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from "react";
-import { generatePDF } from "@/app/utils/generatePDF";
+import { useCustomAlert } from "@/config/useCustomAlert";
+import CustomAlert from "@/components/CustomAlert";
+import PDFPreview from "@/app/utils/generatePDF";
 
 export default function FormCotizacion({
   initialData, // Datos iniciales para editar
@@ -10,6 +12,10 @@ export default function FormCotizacion({
 }) {
   const [plans, setPlans] = useState([]); // Estado para almacenar los planes cargados
   const [isDirty, setIsDirty] = useState(false);
+  const [breakdown, setBreakdown] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const { alerts, showAlert, removeAlert } = useCustomAlert();
   const [formData, setFormData] = useState({
     tipoPlan: "",
     planSeleccionado: "",
@@ -36,6 +42,9 @@ export default function FormCotizacion({
     },
   });
   
+  useEffect(() => {
+    setBreakdown(calculateTotalCost());
+  }, [formData]);
 
     // Cargar los datos iniciales si existen
     useEffect(() => {
@@ -59,17 +68,103 @@ export default function FormCotizacion({
       setIsDirty(true); // Marca que se han hecho cambios en el formulario
     };
 
+    const calculateTotalCost = () => {
+      const IVA = 0.13; // 13% IVA
+      const tipoCambio = parseFloat(formData.tipoCambio || 1); // Tipo de cambio para conversión
+      const breakdown = {};
+      let totalCost = 0;
+    
+      // Precios base de los planes predefinidos
+      const planPrices = {
+        starter: formData.tipoPersona === "fisica" ? 45000 : 65000,
+        professional: 99500,
+        "full-compliance": 130000,
+      };
+    
+      // **Precio Base**
+      if (formData.tipoPlan === "predefinido" && formData.planSeleccionado) {
+        breakdown.planBase = planPrices[formData.planSeleccionado] || 0;
+        totalCost += breakdown.planBase;
+      } else if (formData.tipoPlan === "personalizado") {
+        const basePrice = parseFloat(formData.precioBase || 0); // Asegurar que sea un número
+        breakdown.planBase = basePrice;
+        totalCost += basePrice;
+      }
+    
+      // **Colaboradores**
+      if (formData.planSeleccionado === "full-compliance") {
+        const colaboradoresExtra =
+          parseInt(formData.colaboradores || 0) > 5
+            ? parseInt(formData.colaboradores) - 5
+            : 0;
+        breakdown.colaboradores = colaboradoresExtra * 10000 * (1 + IVA);
+        totalCost += breakdown.colaboradores;
+      } else if (formData.manejoPlanilla) {
+        breakdown.colaboradores = parseInt(formData.colaboradores || 0) * 10000 * (1 + IVA);
+        totalCost += breakdown.colaboradores;
+      }
+    
+      // **Facturas Emitidas**
+      if (formData.facturas && formData.facturasEmitidas) {
+        const facturasEmitidas = parseInt(formData.facturasEmitidas || 0);
+        if (facturasEmitidas <= 10) {
+          breakdown.facturas = 10000 * (1 + IVA);
+        } else if (facturasEmitidas <= 20) {
+          breakdown.facturas = 20000 * (1 + IVA);
+        } else if (facturasEmitidas <= 30) {
+          breakdown.facturas = 30000 * (1 + IVA);
+        } else if (facturasEmitidas <= 40) {
+          breakdown.facturas = 40000 * (1 + IVA);
+        } else {
+          breakdown.facturas =
+            40000 * (1 + IVA) + (facturasEmitidas - 40) * 1000 * (1 + IVA);
+        }
+        totalCost += breakdown.facturas;
+      }
+    
+      // **Transacciones**
+      if (formData.transacciones && parseInt(formData.transacciones) > 50) {
+        breakdown.transacciones =
+          (parseInt(formData.transacciones) - 50) * 1000 * (1 + IVA);
+        totalCost += breakdown.transacciones;
+      } else {
+        breakdown.transacciones = 0; // Asegúrate de que tenga un valor por defecto
+      }
+    
+      // **Características Extra**
+      breakdown.extraFeatures = formData.extraFeatures.reduce((sum, feature) => {
+        const value = parseFloat(feature.value || 0); // Asegurar que sea un número
+        return sum + value;
+      }, 0);
+      totalCost += breakdown.extraFeatures;
+    
+      // **Descuento**
+      const discount = parseFloat(formData.discount || 0);
+      if (formData.tipoDescuento === "porcentaje") {
+        breakdown.discount = totalCost * (discount / 100); // Calcula porcentaje
+      } else {
+        breakdown.discount = discount; // Descuento fijo
+      }
+      totalCost -= breakdown.discount;
 
-
-  const calculateTotalCost = () => {
-    const precioBase = parseFloat(formData.precioBase || 0);
-    const totalExtraCosts = formData.extraFeatures.reduce((sum, feature) => {
-      const value = parseFloat(feature.value || 0);
-      return sum + value;
-    }, 0);
-  
-    return precioBase + totalExtraCosts;
-  };
+      breakdown.totalCost = totalCost;
+    
+      // **Conversión a dólares si aplica**
+      if (formData.tipoMoneda === "USD") {
+        const conversionRate = tipoCambio > 0 ? tipoCambio : 1; // Evitar división por 0
+        Object.keys(breakdown).forEach((key) => {
+          breakdown[key] = breakdown[key] / conversionRate;
+        });
+        totalCost /= conversionRate;
+      }
+    
+      breakdown.totalCost = totalCost;
+    
+      return breakdown;
+    };
+    
+    
+    
   
   // Cargar JSON desde la carpeta public
   useEffect(() => {
@@ -99,12 +194,34 @@ export default function FormCotizacion({
 
   const handlePlanSelection = (e) => {
     const plan = plans.find((p) => p.name === e.target.value);
+    const language = formData.idiomaCotizacion === "ingles" ? "en" : "es"; // Idioma actual
     setFormData({
       ...formData,
       planSeleccionado: e.target.value,
-      featuresSeleccionadas: plan ? plan.features : [],
+      featuresSeleccionadas: plan ? plan.features[language] : [], // Sincroniza características con el idioma
     });
   };
+  
+  const syncFeaturesWithLanguage = (newLanguage) => {
+    const plan = plans.find((p) => p.name === formData.planSeleccionado); // Plan actual
+    const language = newLanguage === "ingles" ? "en" : "es"; // Idioma nuevo
+  
+    setFormData((prevState) => ({
+      ...prevState,
+      idiomaCotizacion: newLanguage,
+      featuresSeleccionadas: plan ? plan.features[language] : [], // Actualiza las características
+    }));
+  };
+  
+
+  const handleLanguageChange = (e) => {
+    const newLanguage = e.target.value;
+    syncFeaturesWithLanguage(newLanguage); // Sincroniza características
+  };
+  
+  
+  
+  
   const handleClientChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevState) => ({
@@ -150,9 +267,10 @@ export default function FormCotizacion({
 
   const handleExtraFeatureChange = (index, field, value) => {
     const updatedExtraFeatures = [...formData.extraFeatures];
-    updatedExtraFeatures[index][field] = field === "value" ? formatPrice(value) : value;
+    updatedExtraFeatures[index][field] = field === "value" ? parseFloat(value) || 0 : value;
     setFormData({ ...formData, extraFeatures: updatedExtraFeatures });
   };
+  
 
   const formatPrice = (value) => {
     if (!value) return "";
@@ -164,19 +282,21 @@ export default function FormCotizacion({
     }).format(numericValue);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Datos del Formulario:", formData);
+    
+    setIsModalOpen(true); // Mostrar vista previa al hacer clic en Generar Cotización
+  };
 
-    // Generar PDF
-    await generatePDF(formData);
+  const closeModal = () => {
+    setIsModalOpen(false); // Cierra el modal
   };
 
   const handleSaveQuotation = async () => {
     try {
-      const totalCost = calculateTotalCost(); // Calcula el costo total
+      const breakdown = calculateTotalCost();
+      const totalCost = breakdown.totalCost;
   
-      // Datos que serán enviados
       const quotationData = {
         ...formData,
         totalCost,
@@ -188,12 +308,9 @@ export default function FormCotizacion({
             ? JSON.parse(localStorage.getItem("user")).fullName
             : "Usuario desconocido",
         },
-        cliente: formData.cliente, // Usamos directamente el cliente dentro de formData
+        cliente: formData.cliente,
       };
   
-      console.log("Datos enviados:", quotationData);
-  
-      // Enviar los datos al backend
       const response = await fetch("http://localhost:5001/save-quotation", {
         method: "POST",
         headers: {
@@ -202,57 +319,84 @@ export default function FormCotizacion({
         body: JSON.stringify(quotationData),
       });
   
-      const data = await response.json();
-  
       if (response.ok) {
-        alert("Cotización guardada exitosamente.");
+        showAlert({
+          type: "success",
+          title: "Éxito",
+          message: "Cotización guardada exitosamente.",
+        });
       } else {
-        alert("Error al guardar la cotización: " + data.error);
+        const data = await response.json();
+        showAlert({
+          type: "error",
+          title: "Error",
+          message: `Error al guardar la cotización: ${data.error}`,
+        });
       }
     } catch (error) {
-      console.error("Error al guardar la cotización:", error);
-      alert("Error al guardar la cotización.");
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: "Error al guardar la cotización.",
+      });
     }
   };
   
+  
+  
   const handleUpdateQuotation = async () => {
     try {
-      const totalCost = calculateTotalCost();
+      const breakdown = calculateTotalCost();
+      const totalCost = breakdown.totalCost;
   
       const updatedData = {
         ...formData,
         totalCost,
       };
   
-      const response = await fetch(`http://localhost:5001/update-quotation/${initialData.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedData),
-      });
+      const response = await fetch(
+        `http://localhost:5001/update-quotation/${initialData.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedData),
+        }
+      );
   
       if (response.ok) {
-        alert("Cotización actualizada exitosamente.");
-        // Cierra el modal y recarga las cotizaciones
-        window.location.reload(); // Recarga la página completa
+        showAlert({
+          type: "success",
+          title: "Éxito",
+          message: "Cotización actualizada exitosamente.",
+        });
+        window.location.reload();
       } else {
-        console.error("Error al actualizar la cotización:", await response.json());
-        alert("Error al actualizar la cotización.");
+        const data = await response.json();
+        showAlert({
+          type: "error",
+          title: "Error",
+          message: `Error al actualizar la cotización: ${data.error}`,
+        });
       }
     } catch (error) {
-      console.error("Error al actualizar la cotización:", error);
-      alert("Error de conexión al actualizar la cotización.");
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: "Error de conexión al actualizar la cotización.",
+      });
     }
   };
+  
   
 
   
   const uniqueFeatures = plans
-    .find((p) => p.name === "full-compliance")
-    ?.features.filter(
-      (feature, index, self) => self.indexOf(feature) === index
-    ) || [];
+  .find((p) => p.name === "full-compliance")
+  ?.features[formData.idiomaCotizacion === "ingles" ? "en" : "es"]
+  .filter((feature, index, self) => self.indexOf(feature) === index) || [];
+
 
     const formatTipoCambio = (value) => {
         if (!value) return "";
@@ -302,16 +446,14 @@ export default function FormCotizacion({
             <div>
             <label className="block text-gray-700 font-medium mb-2">Idioma de Cotización</label>
             <select
-                name="idiomaCotizacion"
-                value={formData.idiomaCotizacion}
-                onChange={(e) =>
-                setFormData({ ...formData, idiomaCotizacion: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
-                required
+              name="idiomaCotizacion"
+              value={formData.idiomaCotizacion}
+              onChange={handleLanguageChange} // Usa el manejador actualizado
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
+              required
             >
-                <option value="espanol">Español</option>
-                <option value="ingles">Inglés</option>
+              <option value="espanol">Español</option>
+              <option value="ingles">Inglés</option>
             </select>
             </div>
         </div>
@@ -482,13 +624,14 @@ export default function FormCotizacion({
             onChange={(e) =>
               setFormData({
                 ...formData,
-                precioBase: formatPrice(e.target.value),
+                precioBase: e.target.value.replace(/[^\d.]/g, ""), // Aceptar solo números
               })
             }
             placeholder="Ingrese el precio base"
             className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
             required
           />
+
         </div>
 
         {/* Características únicas */}
@@ -497,17 +640,17 @@ export default function FormCotizacion({
             Seleccione las características
           </label>
           {uniqueFeatures.map((feature, index) => (
-            <div key={index} className="flex items-center mb-3">
-              <input
-                type="checkbox"
-                value={feature}
-                checked={formData.featuresSeleccionadas.includes(feature)} // Verifica si está seleccionado
-                onChange={handleFeatureSelection} // Controla el cambio
-                className="mr-3 focus:ring-[#305832]"
-              />
-              <span className="text-gray-600">{feature}</span>
-            </div>
-          ))}
+          <div key={index} className="flex items-center mb-3">
+            <input
+              type="checkbox"
+              value={feature}
+              checked={formData.featuresSeleccionadas.includes(feature)} // Verifica si está seleccionado
+              onChange={handleFeatureSelection} // Controla el cambio
+              className="mr-3 focus:ring-[#305832]"
+            />
+            <span className="text-gray-600">{feature}</span>
+          </div>
+        ))}
         </div>
 
       </>
@@ -525,16 +668,16 @@ export default function FormCotizacion({
             </button>
             {formData.extraFeatures.map((feature, index) => (
               <div key={index} className="flex items-center gap-2 mt-2">
-                <input
-                  type="text"
-                  placeholder="Nombre de la característica"
+                <textarea
+                  placeholder="Descripción detallada de la característica"
                   value={feature.name}
                   onChange={(e) =>
                     handleExtraFeatureChange(index, "name", e.target.value)
                   }
-                  className="w-2/3 border rounded-md p-2"
+                  className="w-2/3 border rounded-md p-2 resize-none"
+                  rows="3" // Puedes ajustar el número de filas
                   required
-                />
+                ></textarea>
                 <input
                   type="text"
                   placeholder="Valor en colones"
@@ -648,46 +791,221 @@ export default function FormCotizacion({
         </div>
 
         <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">
-            ¿Cuántas transacciones se hacen al mes?
-          </label>
-          <input
-            type="number"
-            name="transacciones"
-            value={formData.transacciones}
-            onChange={(e) =>
-              setFormData({ ...formData, transacciones: e.target.value })
-            }
-            placeholder="Número de transacciones"
-            className="w-full border rounded-md p-2"
-            required
-          />
-        </div>
+        <label className="block text-gray-700 font-medium mb-2">
+          ¿Cuántas transacciones se hacen al mes?
+        </label>
+        <input
+          type="number"
+          name="transacciones"
+          value={formData.transacciones}
+          onChange={(e) =>
+            setFormData({ ...formData, transacciones: e.target.value })
+          }
+          placeholder="Número de transacciones"
+          className="w-full border rounded-md p-2"
+        />
+      </div>
 
-        {/* Botón para generar PDF */}
-        <button
-          type="submit"
-          onClick={handleSubmit}
-          className="w-full py-3 bg-[#305832] text-white font-semibold rounded-lg hover:bg-[#267423] transition duration-300 ease-in-out"
-        >
-          Generar Cotización (PDF)
-        </button>
+
+{/* Desglose del costo */}
+<div className="mt-6 mb-6 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+  <h3 className="text-lg font-semibold text-gray-800">Desglose del Costo:</h3>
+  <ul className="mt-4 space-y-2">
+    <li className="flex justify-between">
+      <span>Precio Base:</span>
+      <span>
+        {new Intl.NumberFormat(formData.tipoMoneda === "USD" ? "en-US" : "es-CR", {
+          style: "currency",
+          currency: formData.tipoMoneda,
+        }).format(breakdown.planBase || 0)}
+      </span>
+    </li>
+    <li className="flex justify-between">
+      <span>Colaboradores:</span>
+      <span>
+        {new Intl.NumberFormat(formData.tipoMoneda === "USD" ? "en-US" : "es-CR", {
+          style: "currency",
+          currency: formData.tipoMoneda,
+        }).format(breakdown.colaboradores || 0)}
+      </span>
+    </li>
+    <li className="flex justify-between">
+      <span>Facturas:</span>
+      <span>
+        {new Intl.NumberFormat(formData.tipoMoneda === "USD" ? "en-US" : "es-CR", {
+          style: "currency",
+          currency: formData.tipoMoneda,
+        }).format(breakdown.facturas || 0)}
+      </span>
+    </li>
+    <li className="flex justify-between">
+      <span>Transacciones:</span>
+      <span>
+        {new Intl.NumberFormat(formData.tipoMoneda === "USD" ? "en-US" : "es-CR", {
+          style: "currency",
+          currency: formData.tipoMoneda,
+        }).format(breakdown.transacciones || 0)}
+      </span>
+    </li>
+      <li className="flex justify-between">
+        <span>Características Extra:</span>
+        <span>
+          {new Intl.NumberFormat(formData.tipoMoneda === "USD" ? "en-US" : "es-CR", {
+            style: "currency",
+            currency: formData.tipoMoneda,
+          }).format(breakdown.extraFeatures)}
+        </span>
+      </li>
+    {formData.discount > 0 && (
+      <li className="flex justify-between items-center">
+        <span>Descuento:</span>
+        <div className="flex items-center">
+          <span className="text-right">
+            {new Intl.NumberFormat(formData.tipoMoneda === "USD" ? "en-US" : "es-CR", {
+              style: "currency",
+              currency: formData.tipoMoneda,
+            }).format(breakdown.discount)}
+          </span>
+          <button
+            className="ml-2 text-red-500 hover:text-red-700"
+            onClick={() => setFormData({ ...formData, discount: 0 })}
+          >
+            X
+          </button>
+        </div>
+      </li>
+    )}
+
+  </ul>
+
+  {/* Botón para agregar descuento */}
+  {!formData.discount && (
+    <button
+    type="button"
+      className="mt-4 py-1 px-2 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+      onClick={() =>
+        setFormData({ ...formData, showDiscountInput: true })
+      }
+    >
+      Añadir descuento
+    </button>
+  )}
+
+{formData.showDiscountInput && (
+  <div className="p-4 mt-4 bg-gray-50 rounded-lg border border-gray-300">
+    {/* Título */}
+    <h3 className="text-lg font-medium text-gray-700 mb-4">Aplicar Descuento</h3>
+
+    {/* Selector de tipo de descuento */}
+    <div className="mb-4">
+      <label className="block text-gray-700 font-medium mb-2">Tipo de Descuento</label>
+      <select
+        name="tipoDescuento"
+        value={formData.tipoDescuento || "fijo"}
+        onChange={(e) => setFormData({ ...formData, tipoDescuento: e.target.value })}
+        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
+      >
+        <option value="fijo">Fijo (₡)</option>
+        <option value="porcentaje">Porcentaje (%)</option>
+      </select>
+    </div>
+
+    {/* Entrada para el descuento */}
+    <div className="mb-4">
+      <label className="block text-gray-700 font-medium mb-2">Descuento</label>
+      <input
+        type="number"
+        min="0"
+        placeholder={formData.tipoDescuento === "porcentaje" ? "Descuento (%)" : "Descuento (₡)"}
+        value={formData.discount || ""}
+        onChange={(e) => setFormData({ ...formData, discount: parseFloat(e.target.value || 0) })}
+        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
+      />
+    </div>
+
+    {/* Botones de acción */}
+    <div className="flex justify-end gap-2">
+      <button
+        type="button"
+        className="py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600"
+        onClick={() => setFormData({ ...formData, showDiscountInput: false })}
+      >
+        Aceptar
+      </button>
+      <button
+        type="button"
+        className="py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600"
+        onClick={() => setFormData({ ...formData, discount: 0, showDiscountInput: false })}
+      >
+        Cancelar
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+  {/* Total */}
+  <div className="mt-4 border-t pt-4 flex justify-between font-bold text-lg">
+    <span>Total:</span>
+    <span>
+      {new Intl.NumberFormat(formData.tipoMoneda === "USD" ? "en-US" : "es-CR", {
+        style: "currency",
+        currency: formData.tipoMoneda,
+      }).format(breakdown.totalCost || 0)}
+    </span>
+  </div>
+</div>
+
 
         {/* Botón para guardar o actualizar cotización */}
         <button
           type="button"
           onClick={isEditMode ? handleUpdateQuotation : handleSaveQuotation}
-          className={`w-full py-3 mt-4 text-white font-semibold rounded-lg transition duration-300 ease-in-out ${
+          className={`w-full py-3 mt-4  font-semibold rounded-lg transition duration-300 ease-in-out ${
             isEditMode
-              ? "bg-blue-600 hover:bg-blue-500"
-              : "bg-blue-500 hover:bg-blue-600"
+              ? "border border-blue-600 text-blue-600 hover:bg-blue-100"
+              : "border border-blue-600 text-blue-600 hover:bg-blue-100"
           }`}
         >
           {isEditMode ? "Guardar Cambios" : "Guardar Cotización"}
         </button>
-
+        <button
+          type="submit"
+          className="w-full mt-4 py-3 border border-[#305832] text-[#305832] font-semibold rounded-lg hover:bg-green-100 transition duration-300 ease-in-out"
+        >
+          Vista Previa del PDF 
+        </button>
 
       </form>
+
+       {/* Modal para mostrar la vista previa del PDF */}
+       {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 h-3/4 overflow-auto">
+          <PDFPreview formData={formData} breakdown={breakdown} />
+            <button
+              onClick={closeModal}
+              className="mt-4 py-2 px-4 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}    
+      {alerts.map((alert) => (
+      <CustomAlert
+        key={alert.id}
+        isVisible
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => removeAlert(alert.id)}
+        onConfirm={alert.onConfirm}
+      />
+    ))}
     </div>
+
+    
   );
 }

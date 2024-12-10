@@ -1,105 +1,284 @@
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import React from "react";
+import html2pdf from "html2pdf.js";
 
-export const generatePDF = async (formData) => {
+const PDFPreview = ({ formData, breakdown }) => {
+  // Traducciones dinámicas
+  const uniqueFeatures = [...new Set(formData.featuresSeleccionadas)];
+
+  const translations = {
+    es: {
+      title: (tipoPlan, planSeleccionado, nombreCliente) =>
+        tipoPlan === "predefinido"
+          ? `Plan ${planSeleccionado} - ${nombreCliente}`
+          : `Plan Personalizado - ${nombreCliente}`,
+      clientInfo: "Información del Cliente",
+      planFeatures: "Características del Plan",
+      additionalDetails: "Especificaciones Adicionales",
+      extraFeatures: "Características Extras",
+      priceBreakdown: "Desglose de Precios",
+      planCost: "Costo del Plan",
+      payrollCost: "Costo por Planilla",
+      extraFeatureCost: "Costo de Características Extras",
+      discount: "Descuento",
+      totalCost: "Costo Total",
+      downloadPDF: "Descargar PDF",
+      notes: "La presente cotización tiene una validez de 15 días naturales. Para más información, contáctanos a info@jrc.cr.",
+      observation: "Observación: Nosotros brindamos acompañamiento, es el factor de diferenciación entre muchos otros contadores o asesores.",
+      importantNote: "Es importante destacar que el servicio ofrecido no incluye certificaciones de ingresos, flujos proyectados por CPA, certificaciones literales, personerías jurídicas, ni RTBF (a menos que se especifique lo contrario en esta cotización).",
+      yes: "Sí",
+      no: "No",
+      payrollManagement: "Manejo de Planilla",
+      employees: "Cantidad de Colaboradores",
+      electronicBilling: "Facturación Electrónica",
+      date: "Fecha",
+      time: "Hora",
+      predefinedPlan: "Plan Seleccionado",
+      customPlan: "Plan Personalizado",
+    },
+    en: {
+      title: (tipoPlan, planSeleccionado, nombreCliente) =>
+      tipoPlan === "predefinido"
+        ? `Plan ${planSeleccionado} - ${nombreCliente}`
+        : `Custom Plan - ${nombreCliente}`,
+      clientInfo: "Client Information",
+      planFeatures: "Plan Features",
+      additionalDetails: "Additional Specifications",
+      extraFeatures: "Extra Features",
+      priceBreakdown: "Price Breakdown",
+      planCost: "Plan Cost",
+      payrollCost: "Payroll Cost",
+      extraFeatureCost: "Extra Features Cost",
+      discount: "Discount",
+      totalCost: "Total Cost",
+      downloadPDF: "Download PDF",
+      notes: "This quotation is valid for 15 calendar days. For more information, contact us at info@jrc.cr.",
+      observation: "Observation: We provide guidance, which is our differentiating factor compared to many other accountants or advisors.",
+      importantNote: "It is important to note that the offered service does not include income certifications, projected cash flows by CPA, literal certifications, legal entity certificates, or RTBF (unless otherwise specified in this quotation).",
+      yes: "Yes",
+      no: "No",
+      payrollManagement: "Payroll Management",
+      employees: "Number of Employees",
+      electronicBilling: "Electronic Billing",
+      date: "Date",
+      time: "Time",
+      predefinedPlan: "Selected Plan",
+      customPlan: "Custom Plan",
+    },
+  };
+
   const {
+    cliente,
     tipoPlan,
     planSeleccionado,
     featuresSeleccionadas,
     extraFeatures,
-    precioBase,
-    tipoPersona,
-    manejoPlanilla,
+    tipoMoneda,
     colaboradores,
-    facturas,
     facturasEmitidas,
     facturasRecibidas,
-    transacciones,
+    tipoCambio,
   } = formData;
 
-  const doc = new jsPDF();
-  const cotizacionNumber = `COT-${Date.now()}`;
-  const logoImg = "/NEGRO-FONDO-BLANCO.jpg";
+  // Determinar el idioma de la cotización
+  const language = formData.idiomaCotizacion === "ingles" ? "en" : "es";
+  const t = translations[language];
 
-  // Encabezado con logo y título
-  doc.addImage(logoImg, "JPEG", 10, 10, 30, 30);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("Cotización de Cliente", 50, 25);
+  const handleDownloadPDF = () => {
+    const button = document.querySelector(".print-hidden");
+    if (button) button.style.display = "none";
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 10, 50);
-  doc.text(`Hora: ${new Date().toLocaleTimeString()}`, 10, 55);
-  doc.text(`No. Cotización: ${cotizacionNumber}`, 120, 50);
+    const content = document.getElementById("pdf-content");
 
-  doc.line(10, 60, 200, 60);
+    const opt = {
+      margin: 1,
+      filename: `${t.title}_${Date.now()}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "pt", format: "letter", orientation: "portrait" },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+    };
 
-  // Información general
-  doc.autoTable({
-    startY: 70,
-    head: [["Detalles de la Cotización", ""]],
-    body: [
-      ["Tipo de Persona:", tipoPersona],
-      ["Manejo de Planilla:", manejoPlanilla ? "Sí" : "No"],
-      manejoPlanilla ? ["Colaboradores:", colaboradores || "N/A"] : null,
-      ["Facturación Electrónica:", facturas ? "Sí" : "No"],
-      facturas ? ["Facturas Emitidas:", facturasEmitidas || "N/A"] : null,
-      facturas ? ["Facturas Recibidas:", facturasRecibidas || "N/A"] : null,
-      ["Transacciones Mensuales:", transacciones || "N/A"],
-    ].filter(Boolean),
-    theme: "grid",
-    headStyles: { fillColor: "#305832", textColor: "#ffffff" },
-    bodyStyles: { fillColor: "#ffffff", textColor: "#000000" },
-  });
+    html2pdf()
+      .set(opt)
+      .from(content)
+      .save()
+      .finally(() => {
+        if (button) button.style.display = "block";
+      });
+  };
 
-  // Detalles del plan seleccionado o personalizado
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("Detalles del Plan Seleccionado", 10, doc.lastAutoTable.finalY + 15);
+  const currencySymbol = tipoMoneda === "USD" ? "$" : "₡";
 
-  if (tipoPlan === "predefinido") {
-    doc.text(`Plan Seleccionado: ${planSeleccionado}`, 10, doc.lastAutoTable.finalY + 25);
-    doc.autoTable({
-      startY: doc.lastAutoTable.finalY + 30,
-      head: [["Características del Plan"]],
-      body: featuresSeleccionadas.map((feature) => [feature]),
-      theme: "grid",
-      headStyles: { fillColor: "#305832", textColor: "#ffffff" },
-      bodyStyles: { fillColor: "#ffffff", textColor: "#000000" },
-    });
-  } else {
-    doc.text("Plan Personalizado", 10, doc.lastAutoTable.finalY + 25);
-    doc.autoTable({
-      startY: doc.lastAutoTable.finalY + 30,
-      head: [["Descripción", "Monto"]],
-      body: [
-        ["Precio Base", `₡${parseFloat(precioBase).toLocaleString()}`],
-        ...featuresSeleccionadas.map((feature) => [feature, "Incluido"]),
-        ...extraFeatures.map((extra) => [extra.name, `₡${parseFloat(extra.value).toLocaleString()}`]),
-      ],
-      theme: "grid",
-      headStyles: { fillColor: "#305832", textColor: "#ffffff" },
-      bodyStyles: { fillColor: "#ffffff", textColor: "#000000" },
-    });
-  }
+  const convertExtraFeature = (value) => {
+    return tipoMoneda === "USD" && tipoCambio
+      ? value / parseFloat(tipoCambio)
+      : value;
+  };
 
-  const totalExtraCosts = extraFeatures.reduce((sum, feature) => sum + parseFloat(feature.value || 0), 0);
-  const totalCost = parseFloat(precioBase || 0) + totalExtraCosts;
+  return (
+    <div id="pdf-content" className="p-6 mx-auto" style={{ maxWidth: "700px", padding: "20px" }}>
+      <style>
+        {`
+          @media print {
+            .print-hidden {
+              display: none !important;
+            }
+            .page-section {
+              page-break-inside: avoid;
+            }
+            .page-break-before {
+              page-break-before: always;
+            }
+          }
+        `}
+      </style>
 
-  doc.autoTable({
-    startY: doc.lastAutoTable.finalY + 20,
-    head: [["Resumen de Costos", "Monto"]],
-    body: [
-      ["Costo Base", `₡${parseFloat(precioBase).toLocaleString()}`],
-      ["Costos Adicionales", `₡${totalExtraCosts.toLocaleString()}`],
-      ["Costo Total", `₡${totalCost.toLocaleString()}`],
-    ],
-    theme: "grid",
-    headStyles: { fillColor: "#305832", textColor: "#ffffff" },
-    bodyStyles: { fillColor: "#ffffff", textColor: "#000000" },
-  });
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <img src="/NEGRO-FONDO-BLANCO.jpg" alt="Logo" className="h-20" />
+        <div>
+          <p className="text-md font-bold">
+            JRC Consulting Group
+          </p>
+          <p>{t.date}: {new Date().toLocaleDateString(language === "en" ? "en-US" : "es-CR")}</p>
+          <p>{t.time}: {new Date().toLocaleTimeString(language === "en" ? "en-US" : "es-CR")}</p>
+        </div>
+      </div>
 
-  // Guardar o abrir el PDF
-  doc.save(`Cotizacion_${cotizacionNumber}.pdf`);
+      {/* Tipo de Plan */}
+      <div className="text-2xl font-bold mb-4">
+      {t.title(tipoPlan, planSeleccionado, cliente.nombre)}
+      </div>
+
+      {/* Información del Cliente */}
+      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.clientInfo}</div>
+      <table className="w-full mb-4 border page-section">
+        <tbody>
+          <tr>
+            <td className="border px-4 py-2 font-bold">{language === "es" ? "Nombre:" : "Name:"}</td>
+            <td className="border px-4 py-2">{cliente.nombre}</td>
+          </tr>
+          <tr>
+            <td className="border px-4 py-2 font-bold">{language === "es" ? "Correo Electrónico:" : "Email:"}</td>
+            <td className="border px-4 py-2">{cliente.correo}</td>
+          </tr>
+          <tr>
+            <td className="border px-4 py-2 font-bold">{language === "es" ? "Teléfono:" : "Phone:"}</td>
+            <td className="border px-4 py-2">{cliente.telefono}</td>
+          </tr>
+          <tr>
+            <td className="border px-4 py-2 font-bold">{language === "es" ? "Dirección:" : "Address:"}</td>
+            <td className="border px-4 py-2">{cliente.direccion}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Características del Plan */}
+      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.planFeatures}</div>
+      <ul className="list-disc ml-6 mb-4 page-section">
+        {uniqueFeatures.map((feature, index) => (
+          <li key={index}>{feature}</li>
+        ))}
+      </ul>
+
+
+      {/* Especificaciones Adicionales */}
+      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.additionalDetails}</div>
+      <table className="w-full mb-4 border page-section">
+        <tbody>
+          <tr>
+            <td className="border px-4 py-2">{t.payrollManagement}:</td>
+            <td className="border px-4 py-2">{colaboradores > 0 ? t.yes : t.no}</td>
+          </tr>
+          <tr>
+            <td className="border px-4 py-2">{t.employees}:</td>
+            <td className="border px-4 py-2">{colaboradores}</td>
+          </tr>
+          <tr>
+            <td className="border px-4 py-2">{t.electronicBilling}:</td>
+            <td className="border px-4 py-2">{facturasEmitidas || facturasRecibidas ? t.yes : t.no}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Características Extras */}
+      {extraFeatures.length > 0 && (
+        <>
+          <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.extraFeatures}</div>
+          <table className="w-full mb-4 border page-section">
+            <thead>
+              <tr>
+                <th className="border px-4 py-2">{language === "es" ? "Descripción" : "Description"}</th>
+                <th className="border px-4 py-2">{language === "es" ? "Valor" : "Value"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {extraFeatures.map((feature, index) => (
+                <tr key={index}>
+                  <td className="border px-4 py-2">{feature.name}</td>
+                  <td className="border px-4 py-2">
+                    {currencySymbol}
+                    {convertExtraFeature(parseFloat(feature.value)).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Desglose de Precios */}
+      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.priceBreakdown}</div>
+      <table className="w-full mb-4 border page-section">
+        <thead>
+          <tr>
+            <th className="border px-4 py-2">{language === "es" ? "Descripción" : "Description"}</th>
+            <th className="border px-4 py-2">{language === "es" ? "Monto" : "Amount"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="border px-4 py-2">{t.planCost}</td>
+            <td className="border px-4 py-2">{currencySymbol}{breakdown.planBase.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td className="border px-4 py-2">{t.payrollCost}</td>
+            <td className="border px-4 py-2">{currencySymbol}{breakdown.colaboradores?.toLocaleString()}</td>
+          </tr>
+          {extraFeatures.length > 0 && (
+            <tr>
+              <td className="border px-4 py-2">{t.extraFeatureCost}</td>
+              <td className="border px-4 py-2">{currencySymbol}{breakdown.extraFeatures?.toLocaleString()}</td>
+            </tr>
+          )}
+          {breakdown.discount > 0 && (
+            <tr>
+              <td className="border px-4 py-2">{t.discount}</td>
+              <td className="border px-4 py-2">-{currencySymbol}{breakdown.discount.toLocaleString()}</td>
+            </tr>
+          )}
+          <tr>
+            <td className="border px-4 py-2 font-bold">{t.totalCost}</td>
+            <td className="border px-4 py-2 font-bold">{currencySymbol}{breakdown.totalCost.toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Footer */}
+      <div className="text-sm mt-6 page-section">
+        <p>{t.notes}</p>
+        <p className="mt-2 font-semibold">{t.observation}</p>
+        <p className="mt-2">{t.importantNote}</p>
+      </div>
+
+      <button
+        onClick={handleDownloadPDF}
+        className="mt-4 py-2 px-4 bg-[#305832] text-white rounded hover:bg-green-700 print-hidden"
+      >
+        {t.downloadPDF}
+      </button>
+    </div>
+  );
 };
+
+export default PDFPreview;

@@ -40,40 +40,44 @@ export default function Home() {
               />
             </div>
             <ul className="space-y-2">
-              <li
-                className={`px-4 py-2 hover:bg-gray-200 cursor-pointer ${
-                  activeSection === "crearCotizacion" ? "bg-gray-200" : ""
+            <li
+                className={`px-4 py-2 hover:bg-gray-100 text-gray-800 cursor-pointer ${
+                activeSection === "crearCotizacion" ? "bg-[#305832]  font-semibold text-white hover:text-gray-800" : ""
                 }`}
                 onClick={() => {
-                  setActiveSection("crearCotizacion");
-                  setIsSidebarOpen(false); // Cierra el sidebar en pantallas pequeñas
+                setActiveSection("crearCotizacion");
+                setIsSidebarOpen(false); // Cierra el sidebar en pantallas pequeñas
                 }}
-              >
+            >
                 Crear Cotización
-              </li>
-              <li
-                className={`px-4 py-2 hover:bg-gray-200 cursor-pointer ${
-                  activeSection === "historial" ? "bg-gray-200" : ""
+            </li>
+            <li
+                className={`px-4 py-2 hover:bg-gray-100 text-gray-800 cursor-pointer ${
+                activeSection === "historial" ? "bg-[#305832]  font-semibold text-white hover:text-gray-800" : ""
                 }`}
                 onClick={() => {
-                  setActiveSection("historial");
-                  setIsSidebarOpen(false);
+                setActiveSection("historial");
+                setIsSidebarOpen(false);
                 }}
-              >
+            >
                 Historial de Cotizaciones
-              </li>
-              <li
-                className={`px-4 py-2 hover:bg-gray-200 cursor-pointer ${
-                  activeSection === "editarPlantilla" ? "bg-gray-200" : ""
+            </li>
+            {/* Mostrar este botón solo si el usuario es superAdmin */}
+            {user?.role === "superAdmin" && (
+                <li
+                className={`px-4 py-2 hover:bg-gray-100 text-gray-800 cursor-pointer ${
+                    activeSection === "cotizacionesEliminadas" ? "bg-[#305832]  font-semibold text-white hover:text-gray-800" : ""
                 }`}
                 onClick={() => {
-                  setActiveSection("editarPlantilla");
-                  setIsSidebarOpen(false);
+                    setActiveSection("cotizacionesEliminadas");
+                    setIsSidebarOpen(false);
                 }}
-              >
-                Editar Plantilla
-              </li>
+                >
+                Cotizaciones Eliminadas
+                </li>
+            )}
             </ul>
+
           </div>
 
           {/* User Info */}
@@ -121,11 +125,15 @@ export default function Home() {
 
         {/* Content */}
         <main className="p-6 flex-1 overflow-y-auto">
-          {activeSection === "crearCotizacion" && <FormCotizacion />}
-          {activeSection === "historial" && <QuotationHistory />}
-          {activeSection === "editarPlantilla" && <p>Editar Plantilla</p>}
-          {activeSection === "userInfo" && <UserInfo user={user} />}
+        {activeSection === "crearCotizacion" && <FormCotizacion />}
+        {activeSection === "historial" && <QuotationHistory />}
+        {activeSection === "cotizacionesEliminadas" && user?.role === "superAdmin" && (
+            <QuotationHistory isDeletedView={true} />
+            )}
+
+        {activeSection === "userInfo" && <UserInfo user={user} />}
         </main>
+
       </div>
     </div>
   );

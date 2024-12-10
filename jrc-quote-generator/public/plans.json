@@ -1,29 +1,49 @@
 {
-    "plans": [
-      {
-        "name": "starter",
-        "features": [
+  "plans": [
+    {
+      "name": "starter",
+      "features": {
+        "es": [
           "Declaraciones mensuales D-104 (IVA) & D-101 (Renta anual).",
           "Asignación de ejecutivo de cuenta.",
           "Asesoría tributaria y fiscal por parte del ejecutivo.",
           "Acompañamiento mensual en el pago de impuestos.",
           "Proyecciones trimestrales de Renta."
+        ],
+        "en": [
+          "Monthly filings D-104 (VAT) & D-101 (Annual Income).",
+          "Account executive assigned.",
+          "Tax and fiscal advice by the executive.",
+          "Monthly guidance for tax payments.",
+          "Quarterly Income projections."
         ]
-      },
-      {
-        "name": "professional",
-        "features": [
+      }
+    },
+    {
+      "name": "professional",
+      "features": {
+        "es": [
           "Declaraciones mensuales D-104 (IVA) & D-101 (Renta anual).",
           "Asignación de ejecutivo de cuenta.",
           "Asesoría tributaria y fiscal por parte del ejecutivo.",
           "Acompañamiento mensual en el pago de impuestos.",
           "Proyecciones trimestrales de Renta.",
           "Elaboración de Estados Financieros en formato QuickBooks Online."
+        ],
+        "en": [
+          "Monthly filings D-104 (VAT) & D-101 (Annual Income).",
+          "Account executive assigned.",
+          "Tax and fiscal advice by the executive.",
+          "Monthly guidance for tax payments.",
+          "Quarterly Income projections.",
+          "Preparation of Financial Statements in QuickBooks Online format."
         ]
-      },
-      {
-        "name": "full-compliance",
-        "features": [
+      }
+    },
+    {
+      "name": "full-compliance",
+      "features": {
+        "es": [
           "Declaraciones mensuales D-104 (IVA) & D-101 (Renta anual).",
           "Asignación de ejecutivo de cuenta.",
           "Asesoría tributaria y fiscal por parte del ejecutivo.",
@@ -31,8 +51,17 @@
           "Proyecciones trimestrales de Renta.",
           "Elaboración y presentación de planilla CCSS e INS – Máximo 5 colaboradores.",
           "Elaboración de Estados Financieros en formato QuickBooks Online."
+        ],
+        "en": [
+          "Monthly filings D-104 (VAT) & D-101 (Annual Income).",
+          "Account executive assigned.",
+          "Tax and fiscal advice by the executive.",
+          "Monthly guidance for tax payments.",
+          "Quarterly Income projections.",
+          "Preparation and filing of CCSS and INS payroll – Up to 5 employees.",
+          "Preparation of Financial Statements in QuickBooks Online format."
         ]
       }
-    ]
-  }
-  
+    }
+  ]
+}

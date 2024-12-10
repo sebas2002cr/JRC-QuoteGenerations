@@ -1,19 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useCustomAlert } from "@/config/useCustomAlert";
+import CustomAlert from "./CustomAlert";
 
 export default function UserInfo({ user }) {
-  const [newPassword, setNewPassword] = useState("");
   const [users, setUsers] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isChangePasswordVisible, setIsChangePasswordVisible] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", role: "", fullName: "" });
+  const [isChangePasswordVisible, setIsChangePasswordVisible] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+
+  const { alerts, showAlert, removeAlert } = useCustomAlert();
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser?.role === "admin") {
-      setIsAdmin(true);
+    if (storedUser) {
+      setIsAdmin(storedUser.role === "admin" || storedUser.role === "superAdmin");
+      setIsSuperAdmin(storedUser.role === "superAdmin");
       fetchUsers();
     }
   }, []);
@@ -24,27 +30,54 @@ export default function UserInfo({ user }) {
       const data = await response.json();
       setUsers(data.users);
     } catch (error) {
-      console.error("Error al cargar los usuarios:", error);
+      showAlert({
+        type: "error",
+        title: "Error al cargar usuarios",
+        message: "No se pudieron cargar los usuarios.",
+      });
     }
   };
 
-  const handleChangePassword = async () => {
+  // Función para manejar el cambio de contraseña
+const handleChangePassword = async () => {
+    if (!newPassword) {
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: "La nueva contraseña no puede estar vacía.",
+      });
+      return;
+    }
+  
     try {
       const response = await fetch("http://localhost:5001/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, newPassword }),
+        body: JSON.stringify({ email: user?.email, newPassword }),
       });
+  
       if (response.ok) {
-        alert("Contraseña actualizada exitosamente.");
+        showAlert({
+          type: "success",
+          title: "Éxito",
+          message: "Contraseña cambiada exitosamente.",
+        });
         setIsChangePasswordVisible(false);
         setNewPassword("");
       } else {
         const data = await response.json();
-        alert(data.error || "Error al actualizar la contraseña.");
+        showAlert({
+          type: "error",
+          title: "Error",
+          message: data.error || "Error al cambiar la contraseña.",
+        });
       }
     } catch (error) {
-      console.error("Error al cambiar la contraseña:", error);
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: "Error al cambiar la contraseña.",
+      });
     }
   };
 
@@ -56,117 +89,172 @@ export default function UserInfo({ user }) {
         body: JSON.stringify(newUser),
       });
       if (response.ok) {
-        alert("Usuario agregado exitosamente.");
+        showAlert({
+          type: "success",
+          title: "Éxito",
+          message: "Usuario agregado exitosamente.",
+        });
         fetchUsers();
         setIsAddUserModalOpen(false);
         setNewUser({ email: "", role: "", fullName: "" });
       } else {
         const data = await response.json();
-        alert(data.error || "Error al agregar el usuario.");
+        showAlert({
+          type: "error",
+          title: "Error",
+          message: data.error || "Error al agregar el usuario.",
+        });
       }
     } catch (error) {
-      console.error("Error al agregar el usuario:", error);
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: "Error al agregar el usuario.",
+      });
     }
   };
 
   const handleDeleteUser = async (email) => {
-    if (confirm(`¿Estás seguro de que deseas eliminar al usuario con email ${email}?`)) {
-      try {
-        const response = await fetch("http://localhost:5001/delete-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
+    showAlert({
+      type: "confirm",
+      title: "Confirmación",
+      message: `¿Estás seguro de que deseas eliminar al usuario con email ${email}?`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch("http://localhost:5001/delete-user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
 
-        if (response.ok) {
-          alert("Usuario eliminado exitosamente.");
-          fetchUsers();
-        } else {
-          const data = await response.json();
-          alert(data.error || "Error al eliminar el usuario.");
+          if (response.ok) {
+            showAlert({
+              type: "success",
+              title: "Éxito",
+              message: "Usuario eliminado exitosamente.",
+            });
+            fetchUsers();
+          } else {
+            const data = await response.json();
+            showAlert({
+              type: "error",
+              title: "Error",
+              message: data.error || "Error al eliminar el usuario.",
+            });
+          }
+        } catch (error) {
+          showAlert({
+            type: "error",
+            title: "Error",
+            message: "Error al eliminar el usuario.",
+          });
         }
-      } catch (error) {
-        console.error("Error al eliminar el usuario:", error);
-        alert("Error al eliminar el usuario.");
-      }
-    }
+      },
+    });
   };
 
   const handleResetPassword = async (email) => {
-    try {
-      const response = await fetch("http://localhost:5001/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+    if (!isSuperAdmin) {
+      showAlert({
+        type: "error",
+        title: "Acceso denegado",
+        message: "No tienes permiso para restablecer contraseñas.",
       });
-      if (response.ok) {
-        alert("Contraseña restablecida exitosamente.");
-      } else {
-        const data = await response.json();
-        alert(data.error || "Error al restablecer la contraseña.");
-      }
-    } catch (error) {
-      console.error("Error al restablecer la contraseña:", error);
+      return;
     }
-  };
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="p-6 bg-white rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">Usuario no autenticado</h2>
-          <p className="text-gray-600">Por favor, inicia sesión para ver esta información.</p>
-        </div>
-      </div>
-    );
-  }
+    showAlert({
+      type: "confirm",
+      title: "Confirmación",
+      message: `¿Estás seguro de que deseas restablecer la contraseña del usuario con email ${email}?`,
+      onConfirm: async () => {
+        try {
+          const response = await fetch("http://localhost:5001/reset-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+
+          if (response.ok) {
+            showAlert({
+              type: "success",
+              title: "Éxito",
+              message: "Contraseña restablecida exitosamente.",
+            });
+          } else {
+            const data = await response.json();
+            showAlert({
+              type: "error",
+              title: "Error",
+              message: data.error || "Error al restablecer la contraseña.",
+            });
+          }
+        } catch (error) {
+          showAlert({
+            type: "error",
+            title: "Error",
+            message: "Error al restablecer la contraseña.",
+          });
+        }
+      },
+    });
+  };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg max-w-5xl mx-auto">
       <div className="flex flex-col items-center text-center">
-        {/* Foto de usuario */}
-        <div className="w-24 h-24 rounded-full bg-gray-500 text-white flex items-center justify-center text-3xl font-bold">
-          {user.fullName.split(" ").map((n) => n[0]).join("")}
+      <div className="w-24 h-24 rounded-full bg-gray-500 text-white flex items-center justify-center text-3xl font-bold">
+        {user?.fullName?.split(" ").map((n) => n[0]).join("") || "?"}
         </div>
         <h2 className="text-2xl font-bold mt-4">Información del Usuario</h2>
         <p className="mt-2 text-lg">
-          <strong>Nombre:</strong> {user.fullName}
+        <strong>Nombre:</strong> {user?.fullName || "No disponible"}
         </p>
         <p className="text-lg">
-          <strong>Email:</strong> {user.email}
+        <strong>Email:</strong> {user?.email || "No disponible"}
         </p>
       </div>
-
-      {/* Cambiar Contraseña */}
-      <div className="mt-6 flex flex-col items-center">
-        {!isChangePasswordVisible ? (
-          <button
-            onClick={() => setIsChangePasswordVisible(true)}
-            className="mt-2 px-4 py-2 font-semibold text-[#305832] border border-green-800 rounded-lg"
-          >
-            ¿Quieres cambiar tu contraseña?
-          </button>
-        ) : (
-          <div className="mt-4 w-full sm:w-1/2">
-            <h3 className="text-lg font-semibold text-center">Cambiar Contraseña</h3>
-            <input
-              type="password"
-              placeholder="Nueva contraseña"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg p-2 mt-2"
-            />
-            <button
-              onClick={handleChangePassword}
-              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 w-full"
-            >
-              Cambiar Contraseña
-            </button>
-          </div>
-        )}
+      {/* Cambiar contraseña */}
+<div className="mt-6 flex flex-col items-center">
+  {!isChangePasswordVisible ? (
+    <button
+      onClick={() => setIsChangePasswordVisible(true)}
+      className="px-4 py-2 bg-white text-[#305832] border border-[#305832] rounded-lg hover:bg-gray-100"
+    >
+      Cambiar contraseña
+    </button>
+  ) : (
+    <div className="mt-4 w-full sm:w-1/2">
+      <h3 className="text-lg font-semibold text-center">Nueva contraseña</h3>
+      <input
+        type="password"
+        placeholder="Ingresa nueva contraseña"
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg p-2 mt-2"
+      />
+      <div className="flex justify-between mt-2">
+        <button
+          onClick={handleChangePassword}
+          className="px-4 py-2 bg-[#305832] text-white rounded-lg hover:bg-green-800"
+        >
+          Guardar
+        </button>
+        <button
+          onClick={() => {
+            setIsChangePasswordVisible(false);
+            setNewPassword("");
+          }}
+          className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+        >
+          Cancelar
+        </button>
       </div>
+    </div>
+  )}
+</div>
 
-      {/* Administrar Usuarios */}
+
       {isAdmin && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-4 text-center">Administrar Usuarios</h3>
@@ -176,45 +264,50 @@ export default function UserInfo({ user }) {
           >
             Agregar Usuario
           </button>
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto border-collapse border border-gray-300 text-left text-sm">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="border border-gray-300 px-4 py-2">Nombre</th>
-                <th className="border border-gray-300 px-4 py-2">Email</th>
-                <th className="border border-gray-300 px-4 py-2">Rol</th>
-                <th className="border border-gray-300 px-4 py-2 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.email} className="hover:bg-gray-50">
-                  <td className="border border-gray-300 px-4 py-2">{user.fullName}</td>
-                  <td className="border border-gray-300 px-4 py-2">{user.email}</td>
-                  <td className="border border-gray-300 px-4 py-2">{user.role}</td>
-                  <td className="border border-gray-300 px-4 py-2 flex gap-1 justify-center">
-                    <button
-                      onClick={() => handleResetPassword(user.email)}
-                      className="px-2 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 text-xs"
-                    >
-                      Resetear
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user.email)}
-                      className="px-2 py-1 bg-red-500 text-white rounded-full hover:bg-red-600 text-xs"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto border-collapse border border-gray-300 text-left text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border border-gray-300 px-4 py-2">Nombre</th>
+                  <th className="border border-gray-300 px-4 py-2">Email</th>
+                  <th className="border border-gray-300 px-4 py-2">Rol</th>
+                  {isSuperAdmin && (
+                    <th className="border border-gray-300 px-4 py-2 text-center">
+                      Acciones
+                    </th>
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.email} className="hover:bg-gray-50">
+                    <td className="border border-gray-300 px-4 py-2">{user.fullName}</td>
+                    <td className="border border-gray-300 px-4 py-2">{user.email}</td>
+                    <td className="border border-gray-300 px-4 py-2">{user.role}</td>
+                    {isSuperAdmin && (
+                      <td className="border border-gray-300 px-4 py-2 flex gap-1 justify-center">
+                        <button
+                          onClick={() => handleResetPassword(user.email)}
+                          className="px-2 py-1 border border-blue-500 text-blue-500 rounded-md hover:bg-blue-100 text-xs"
+                        >
+                          Resetear
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.email)}
+                          className="px-2 py-1 border border-red-500 text-red-500 rounded-md hover:bg-red-100 text-xs"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Modal para agregar usuario */}
       {isAddUserModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-[95%] sm:w-[50%]">
@@ -269,7 +362,7 @@ export default function UserInfo({ user }) {
             <div className="flex justify-end space-x-4">
               <button
                 onClick={handleAddUser}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                className="px-4 py-2 bg-white border border-[#305832] text-[#305832] rounded-lg hover:bg-[#305832] hover:text-white"
               >
                 Agregar
               </button>
@@ -283,6 +376,19 @@ export default function UserInfo({ user }) {
           </div>
         </div>
       )}
+
+      {/* Render de alertas */}
+      {alerts.map((alert) => (
+        <CustomAlert
+          key={alert.id}
+          isVisible
+          type={alert.type}
+          title={alert.title}
+          message={alert.message}
+          onClose={() => removeAlert(alert.id)}
+          onConfirm={alert.onConfirm}
+        />
+      ))}
     </div>
   );
 }
