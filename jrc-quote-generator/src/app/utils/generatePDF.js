@@ -2,7 +2,6 @@ import React from "react";
 import html2pdf from "html2pdf.js";
 
 const PDFPreview = ({ formData, breakdown }) => {
-  // Traducciones dinámicas
   const uniqueFeatures = [...new Set(formData.featuresSeleccionadas)];
 
   const translations = {
@@ -19,6 +18,8 @@ const PDFPreview = ({ formData, breakdown }) => {
       planCost: "Costo del Plan",
       payrollCost: "Costo por Planilla",
       extraFeatureCost: "Costo de Características Extras",
+      invoiceCost: "Costo de Facturación Electrónica",
+      transactionCost: "Costo de Transacciones",
       discount: "Descuento",
       totalCost: "Costo Total",
       downloadPDF: "Descargar PDF",
@@ -29,17 +30,17 @@ const PDFPreview = ({ formData, breakdown }) => {
       no: "No",
       payrollManagement: "Manejo de Planilla",
       employees: "Cantidad de Colaboradores",
-      electronicBilling: "Facturación Electrónica",
+      issuedInvoices: "Facturas Emitidas",
+      receivedInvoices: "Facturas Recibidas",
+      transactions: "Transacciones",
       date: "Fecha",
       time: "Hora",
-      predefinedPlan: "Plan Seleccionado",
-      customPlan: "Plan Personalizado",
     },
     en: {
       title: (tipoPlan, planSeleccionado, nombreCliente) =>
-      tipoPlan === "predefinido"
-        ? `${planSeleccionado} Plan - ${nombreCliente}`
-        : `Custom Plan - ${nombreCliente}`,
+        tipoPlan === "predefinido"
+          ? `${planSeleccionado} Plan - ${nombreCliente}`
+          : `Custom Plan - ${nombreCliente}`,
       clientInfo: "Client Information",
       planFeatures: "Plan Features",
       additionalDetails: "Additional Specifications",
@@ -48,6 +49,8 @@ const PDFPreview = ({ formData, breakdown }) => {
       planCost: "Plan Cost",
       payrollCost: "Payroll Cost",
       extraFeatureCost: "Extra Features Cost",
+      invoiceCost: "Electronic Billing Cost",
+      transactionCost: "Transaction Cost",
       discount: "Discount",
       totalCost: "Total Cost",
       downloadPDF: "Download PDF",
@@ -58,11 +61,11 @@ const PDFPreview = ({ formData, breakdown }) => {
       no: "No",
       payrollManagement: "Payroll Management",
       employees: "Number of Employees",
-      electronicBilling: "Electronic Billing",
+      issuedInvoices: "Issued Invoices",
+      receivedInvoices: "Received Invoices",
+      transactions: "Transactions",
       date: "Date",
       time: "Time",
-      predefinedPlan: "Selected Plan",
-      customPlan: "Custom Plan",
     },
   };
 
@@ -70,16 +73,15 @@ const PDFPreview = ({ formData, breakdown }) => {
     cliente,
     tipoPlan,
     planSeleccionado,
-    featuresSeleccionadas,
     extraFeatures,
     tipoMoneda,
     colaboradores,
     facturasEmitidas,
     facturasRecibidas,
+    transacciones,
     tipoCambio,
   } = formData;
 
-  // Determinar el idioma de la cotización
   const language = formData.idiomaCotizacion === "ingles" ? "en" : "es";
   const t = translations[language];
 
@@ -137,9 +139,7 @@ const PDFPreview = ({ formData, breakdown }) => {
       <div className="flex justify-between items-center mb-4">
         <img src="/NEGRO-FONDO-BLANCO.jpg" alt="Logo" className="h-20" />
         <div>
-          <p className="text-md font-bold">
-            JRC Consulting Group
-          </p>
+          <p className="text-md font-bold">JRC Consulting Group</p>
           <p>{t.date}: {new Date().toLocaleDateString(language === "en" ? "en-US" : "es-CR")}</p>
           <p>{t.time}: {new Date().toLocaleTimeString(language === "en" ? "en-US" : "es-CR")}</p>
         </div>
@@ -147,7 +147,7 @@ const PDFPreview = ({ formData, breakdown }) => {
 
       {/* Tipo de Plan */}
       <div className="text-2xl font-bold mb-4">
-      {t.title(tipoPlan, planSeleccionado, cliente.nombre)}
+        {t.title(tipoPlan, planSeleccionado, cliente.nombre)}
       </div>
 
       {/* Información del Cliente */}
@@ -181,7 +181,6 @@ const PDFPreview = ({ formData, breakdown }) => {
         ))}
       </ul>
 
-
       {/* Especificaciones Adicionales */}
       <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.additionalDetails}</div>
       <table className="w-full mb-4 border page-section">
@@ -194,9 +193,21 @@ const PDFPreview = ({ formData, breakdown }) => {
             <td className="border px-4 py-2">{t.employees}:</td>
             <td className="border px-4 py-2">{colaboradores}</td>
           </tr>
+          {formData.facturas && (
+            <>
+              <tr>
+                <td className="border px-4 py-2">{t.issuedInvoices}:</td>
+                <td className="border px-4 py-2">{facturasEmitidas || 0}</td>
+              </tr>
+              <tr>
+                <td className="border px-4 py-2">{t.receivedInvoices}:</td>
+                <td className="border px-4 py-2">{facturasRecibidas || 0}</td>
+              </tr>
+            </>
+          )}
           <tr>
-            <td className="border px-4 py-2">{t.electronicBilling}:</td>
-            <td className="border px-4 py-2">{facturasEmitidas || facturasRecibidas ? t.yes : t.no}</td>
+            <td className="border px-4 py-2">{t.transactions}:</td>
+            <td className="border px-4 py-2">{transacciones || 0}</td>
           </tr>
         </tbody>
       </table>
@@ -226,8 +237,10 @@ const PDFPreview = ({ formData, breakdown }) => {
           </table>
         </>
       )}
-{/* Forzar un salto de página después */}
-<div className="page-break-before"></div>
+
+      {/* Forzar un salto de página después */}
+      <div className="page-break-before"></div>
+
       {/* Desglose de Precios */}
       <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.priceBreakdown}</div>
       <table className="w-full mb-4 border page-section">
@@ -246,10 +259,22 @@ const PDFPreview = ({ formData, breakdown }) => {
             <td className="border px-4 py-2">{t.payrollCost}</td>
             <td className="border px-4 py-2">{currencySymbol}{breakdown.colaboradores?.toLocaleString()}</td>
           </tr>
-          {extraFeatures.length > 0 && (
+          {breakdown.facturas > 0 && (
+            <tr>
+              <td className="border px-4 py-2">{t.invoiceCost}</td>
+              <td className="border px-4 py-2">{currencySymbol}{breakdown.facturas.toLocaleString()}</td>
+            </tr>
+          )}
+          {breakdown.transacciones > 0 && (
+            <tr>
+              <td className="border px-4 py-2">{t.transactionCost}</td>
+              <td className="border px-4 py-2">{currencySymbol}{breakdown.transacciones.toLocaleString()}</td>
+            </tr>
+          )}
+          {breakdown.extraFeatures > 0 && (
             <tr>
               <td className="border px-4 py-2">{t.extraFeatureCost}</td>
-              <td className="border px-4 py-2">{currencySymbol}{breakdown.extraFeatures?.toLocaleString()}</td>
+              <td className="border px-4 py-2">{currencySymbol}{breakdown.extraFeatures.toLocaleString()}</td>
             </tr>
           )}
           {breakdown.discount > 0 && (
@@ -271,7 +296,7 @@ const PDFPreview = ({ formData, breakdown }) => {
         <p className="mt-2 font-semibold">{t.observation}</p>
         <p className="mt-2">{t.importantNote}</p>
       </div>
-      {/* Footer */}
+
       <div className="flex justify-between items-center mt-6 page-section">
         <div className="text-sm">
           <p>JRC Consulting Group</p>
@@ -280,7 +305,6 @@ const PDFPreview = ({ formData, breakdown }) => {
           <img src="/pyme_costa_rica_image.png" alt="PYME Logo" className="h-12" />
         </div>
       </div>
-
 
       <button
         onClick={handleDownloadPDF}
