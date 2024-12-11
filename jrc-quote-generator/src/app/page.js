@@ -17,7 +17,7 @@ export default function Login() {
     setIsLoading(true);
   
     try {
-      const response = await fetch("http://localhost:4200/api/login", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
