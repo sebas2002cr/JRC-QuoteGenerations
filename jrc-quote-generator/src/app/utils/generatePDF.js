@@ -91,7 +91,7 @@ const PDFPreview = ({ formData, breakdown }) => {
 
     const opt = {
       margin: 1,
-      filename: `${t.title}_${Date.now()}.pdf`,
+      filename: `Cotizacion-${tipoPlan}-${cliente.nombre.replace(/\s+/g, "_")}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { unit: "pt", format: "letter", orientation: "portrait" },
@@ -224,6 +224,8 @@ const PDFPreview = ({ formData, breakdown }) => {
               ))}
             </tbody>
           </table>
+          {/* Forzar un salto de página después */}
+    <div className="page-break-before"></div>
         </>
       )}
 
@@ -270,6 +272,16 @@ const PDFPreview = ({ formData, breakdown }) => {
         <p className="mt-2 font-semibold">{t.observation}</p>
         <p className="mt-2">{t.importantNote}</p>
       </div>
+      {/* Footer */}
+      <div className="flex justify-between items-center mt-6 page-section">
+        <div className="text-sm">
+          <p>JRC Consulting Group</p>
+        </div>
+        <div>
+          <img src="/pyme_costa_rica_image.png" alt="PYME Logo" className="h-12" />
+        </div>
+      </div>
+
 
       <button
         onClick={handleDownloadPDF}
