@@ -182,8 +182,8 @@ const handlePermanentDelete = async (id) => {
     const fetchQuotations = async () => {
       try {
         const endpoint = isDeletedView
-          ? "${process.env.NEXT_PUBLIC_URL_API_BACKEND}/get-quotations-deleted"
-          : "${process.env.NEXT_PUBLIC_URL_API_BACKEND}/get-quotations";
+          ? `${process.env.NEXT_PUBLIC_URL_API_BACKEND}/get-quotations-deleted`
+          : `${process.env.NEXT_PUBLIC_URL_API_BACKEND}/get-quotations`;
         const response = await fetch(endpoint);
         const data = await response.json();
   
