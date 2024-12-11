@@ -38,7 +38,7 @@ const PDFPreview = ({ formData, breakdown }) => {
     en: {
       title: (tipoPlan, planSeleccionado, nombreCliente) =>
       tipoPlan === "predefinido"
-        ? `Plan ${planSeleccionado} - ${nombreCliente}`
+        ? `${planSeleccionado} Plan - ${nombreCliente}`
         : `Custom Plan - ${nombreCliente}`,
       clientInfo: "Client Information",
       planFeatures: "Plan Features",
