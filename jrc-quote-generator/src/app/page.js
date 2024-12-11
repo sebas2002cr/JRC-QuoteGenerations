@@ -15,10 +15,10 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-  
+    
     try {
-      console.log("")
-      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/login`, {
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,7 +37,7 @@ export default function Login() {
       }
   
       const data = await response.json();
-      console.log("Datos del backend:", data); // Depuración
+      
       login(data.token, data.user); // Asegúrate de pasar data.user correctamente
     } catch (err) {
       console.error("Error durante el inicio de sesión:", err);

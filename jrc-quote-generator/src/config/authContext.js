@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   
       if (token && userData) {
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/validate-token`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/validate-token`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
