@@ -17,7 +17,8 @@ export default function Login() {
     setIsLoading(true);
   
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/login`, {
+      console.log("")
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

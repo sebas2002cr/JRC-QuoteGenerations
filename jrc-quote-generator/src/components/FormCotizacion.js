@@ -311,7 +311,7 @@ export default function FormCotizacion({
         cliente: formData.cliente,
       };
   
-      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/save-quotation`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/save-quotation`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -355,7 +355,7 @@ export default function FormCotizacion({
       };
   
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/update-quotation/${initialData.id}`,
+        `${process.env.NEXT_PUBLIC_URL_API_BACKEND}/update-quotation/${initialData.id}`,
         {
           method: "PUT",
           headers: {

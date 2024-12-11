@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   
       if (token && userData) {
         try {
-          const response = await fetch("${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/validate-token", {
+          const response = await fetch("${process.env.NEXT_PUBLIC_URL_API_BACKEND}/validate-token", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -49,8 +49,7 @@ export const AuthProvider = ({ children }) => {
   
 
   const login = (token, userData) => {
-    console.log("Token recibido:", token);
-    console.log("Datos del usuario recibidos:", userData);
+
   
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData)); // Guardar los datos del usuario en localStorage
