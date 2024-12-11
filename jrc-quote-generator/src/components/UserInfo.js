@@ -26,7 +26,7 @@ export default function UserInfo({ user }) {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost:5001/get-users");
+      const response = await fetch("${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/get-users");
       const data = await response.json();
       setUsers(data.users);
     } catch (error) {
@@ -50,7 +50,7 @@ const handleChangePassword = async () => {
     }
   
     try {
-      const response = await fetch("http://localhost:5001/change-password", {
+      const response = await fetch("${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user?.email, newPassword }),
@@ -83,7 +83,7 @@ const handleChangePassword = async () => {
 
   const handleAddUser = async () => {
     try {
-      const response = await fetch("http://localhost:5001/add-user", {
+      const response = await fetch("${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/add-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newUser),
@@ -121,7 +121,7 @@ const handleChangePassword = async () => {
       message: `¿Estás seguro de que deseas eliminar al usuario con email ${email}?`,
       onConfirm: async () => {
         try {
-          const response = await fetch("http://localhost:5001/delete-user", {
+          const response = await fetch("${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/delete-user", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
@@ -169,7 +169,7 @@ const handleChangePassword = async () => {
       message: `¿Estás seguro de que deseas restablecer la contraseña del usuario con email ${email}?`,
       onConfirm: async () => {
         try {
-          const response = await fetch("http://localhost:5001/reset-password", {
+          const response = await fetch("${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/reset-password", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),

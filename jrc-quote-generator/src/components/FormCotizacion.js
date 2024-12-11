@@ -311,7 +311,7 @@ export default function FormCotizacion({
         cliente: formData.cliente,
       };
   
-      const response = await fetch("http://localhost:5001/save-quotation", {
+      const response = await fetch("http://localhost:4200/api/save-quotation", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -355,7 +355,7 @@ export default function FormCotizacion({
       };
   
       const response = await fetch(
-        `http://localhost:5001/update-quotation/${initialData.id}`,
+        `http://localhost:4200/api/update-quotation/${initialData.id}`,
         {
           method: "PUT",
           headers: {

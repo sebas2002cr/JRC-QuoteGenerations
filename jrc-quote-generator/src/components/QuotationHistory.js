@@ -41,7 +41,7 @@ const handleRestore = async (id) => {
     onConfirm: async () => {
       try {
         const response = await fetch(
-          `http://localhost:5001/restore-quotation/${id}`,
+          `${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/restore-quotation/${id}`,
           { method: "PUT" } // Asume que este endpoint existe en tu backend
         );
 
@@ -80,7 +80,7 @@ const handlePermanentDelete = async (id) => {
     onConfirm: async () => {
       try {
         const response = await fetch(
-          `http://localhost:5001/delete-quotation-permanently/${id}`,
+          `${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/delete-quotation-permanently/${id}`,
           { method: "DELETE" } // Asume que este endpoint existe en tu backend
         );
 
@@ -142,7 +142,7 @@ const handlePermanentDelete = async (id) => {
   
           const deletedBy = user.fullName;
   
-          const response = await fetch(`http://localhost:5001/delete-quotation/${id}`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/delete-quotation/${id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -182,8 +182,8 @@ const handlePermanentDelete = async (id) => {
     const fetchQuotations = async () => {
       try {
         const endpoint = isDeletedView
-          ? "http://localhost:5001/get-quotations-deleted"
-          : "http://localhost:5001/get-quotations";
+          ? "${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/get-quotations-deleted"
+          : "${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/get-quotations";
         const response = await fetch(endpoint);
         const data = await response.json();
   
