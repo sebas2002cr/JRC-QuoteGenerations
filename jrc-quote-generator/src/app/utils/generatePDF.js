@@ -224,11 +224,10 @@ const PDFPreview = ({ formData, breakdown }) => {
               ))}
             </tbody>
           </table>
-          {/* Forzar un salto de página después */}
-    <div className="page-break-before"></div>
         </>
       )}
-
+{/* Forzar un salto de página después */}
+<div className="page-break-before"></div>
       {/* Desglose de Precios */}
       <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.priceBreakdown}</div>
       <table className="w-full mb-4 border page-section">
