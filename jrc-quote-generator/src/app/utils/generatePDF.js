@@ -6,15 +6,19 @@ const PDFPreview = ({ formData, breakdown }) => {
 
   const translations = {
     es: {
-      title: (tipoPlan, planSeleccionado, nombreCliente) =>
-        tipoPlan === "predefinido"
+      title: (tipoPlan, planSeleccionado, nombreCliente) => {
+        if (tipoPlan === "servicios-adicionales") {
+          return `Servicios Adicionales - ${nombreCliente}`;
+        }
+        return tipoPlan === "predefinido"
           ? `Plan ${planSeleccionado} - ${nombreCliente}`
-          : `Plan Personalizado - ${nombreCliente}`,
+          : `Plan Personalizado - ${nombreCliente}`;
+      },
       clientInfo: "Información del Cliente",
       planFeatures: "Características del Plan",
       additionalDetails: "Especificaciones Adicionales",
       extraFeatures: "Características Extras",
-      priceBreakdown: "Desglose de Precios",
+      priceBreakdown: "Desglose de Precios - IVA incluido",
       planCost: "Costo del Plan",
       payrollCost: "Costo por Planilla",
       extraFeatureCost: "Costo de Características Extras",
@@ -37,15 +41,19 @@ const PDFPreview = ({ formData, breakdown }) => {
       time: "Hora",
     },
     en: {
-      title: (tipoPlan, planSeleccionado, nombreCliente) =>
-        tipoPlan === "predefinido"
+      title: (tipoPlan, planSeleccionado, nombreCliente) => {
+        if (tipoPlan === "servicios-adicionales") {
+          return `Additional Services - ${nombreCliente}`;
+        }
+        return tipoPlan === "predefinido"
           ? `${planSeleccionado} Plan - ${nombreCliente}`
-          : `Custom Plan - ${nombreCliente}`,
+          : `Custom Plan - ${nombreCliente}`;
+      },
       clientInfo: "Client Information",
       planFeatures: "Plan Features",
       additionalDetails: "Additional Specifications",
       extraFeatures: "Extra Features",
-      priceBreakdown: "Price Breakdown",
+      priceBreakdown: "Price Breakdown - VAT",
       planCost: "Plan Cost",
       payrollCost: "Payroll Cost",
       extraFeatureCost: "Extra Features Cost",
@@ -80,6 +88,7 @@ const PDFPreview = ({ formData, breakdown }) => {
     facturasRecibidas,
     transacciones,
     tipoCambio,
+    createdAt,
   } = formData;
 
   const language = formData.idiomaCotizacion === "ingles" ? "en" : "es";
@@ -94,8 +103,8 @@ const PDFPreview = ({ formData, breakdown }) => {
     const opt = {
       margin: 1,
       filename: `Cotizacion-${tipoPlan}-${cliente.nombre.replace(/\s+/g, "_")}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2 },
+      image: { type: "jpeg", quality: 1 },
+      html2canvas: { scale: 3 },
       jsPDF: { unit: "pt", format: "letter", orientation: "portrait" },
       pagebreak: { mode: ["avoid-all", "css", "legacy"] },
     };
@@ -117,117 +126,155 @@ const PDFPreview = ({ formData, breakdown }) => {
       : value;
   };
 
+  const formatValue = (value) => {
+    return value && value !== 0 ? value : "N/A";
+  };
+
+  const formatValueDesgloce = (value, currencySymbol) => {
+    if (!value || value === 0) {
+      return "N/A"; // Retorna "N/A" si el valor es 0 o vacío.
+    }
+    // Formatea el número con separadores de miles
+    return `${currencySymbol}${new Intl.NumberFormat("es-CR").format(value)}`;
+  };
+  
+
   return (
-    <div id="pdf-content" className="p-6 mx-auto" style={{ maxWidth: "700px", padding: "20px" }}>
+    <div id="pdf-content" className="p-4 mx-auto" style={{ maxWidth: "700px",padding: "16px", fontSize: "10px"  }}>
       <style>
-        {`
-          @media print {
-            .print-hidden {
-              display: none !important;
-            }
-            .page-section {
-              page-break-inside: avoid;
-            }
-            .page-break-before {
-              page-break-before: always;
-            }
-          }
-        `}
-      </style>
+    {`
+      @media print {
+        .print-hidden {
+          display: none !important;
+        }
+        .page-section {
+          page-break-inside: avoid;
+        }
+        .page-break-before {
+          page-break-before: always;
+        }
+      }
+      table {
+        font-size: 9px;
+      }
+      table th, table td {
+        padding: 4px;
+      }
+      .bg-title {
+        font-size: 10px;
+        padding: 4px;
+      }
+    `}
+  </style>
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-2">
         <img src="/NEGRO-FONDO-BLANCO.jpg" alt="Logo" className="h-20" />
         <div>
-          <p className="text-md font-bold">JRC Consulting Group</p>
-          <p>{t.date}: {new Date().toLocaleDateString(language === "en" ? "en-US" : "es-CR")}</p>
-          <p>{t.time}: {new Date().toLocaleTimeString(language === "en" ? "en-US" : "es-CR")}</p>
+          <p className="text-sm font-bold">JRC Consulting Group</p>
+          <p className="text-xs">
+            Fecha: {createdAt
+              ? new Date(createdAt._seconds * 1000).toLocaleDateString("es-CR")
+              : "Fecha no disponible"}
+          </p>
+          <p className="text-xs font-bold">
+            Cotización # {formData.cotizacionNumber || "N/A"}
+          </p>
         </div>
       </div>
 
       {/* Tipo de Plan */}
-      <div className="text-2xl font-bold mb-4">
-        {t.title(tipoPlan, planSeleccionado, cliente.nombre)}
+      <div className="text-xl font-bold mb-2">
+        {t.title(tipoPlan, planSeleccionado, cliente.nombre || cliente.nombreCompleto)}
       </div>
 
       {/* Información del Cliente */}
-      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.clientInfo}</div>
-      <table className="w-full mb-4 border page-section">
-        <tbody>
-          <tr>
-            <td className="border px-4 py-2 font-bold">{language === "es" ? "Nombre:" : "Name:"}</td>
-            <td className="border px-4 py-2">{cliente.nombre}</td>
-          </tr>
-          <tr>
-            <td className="border px-4 py-2 font-bold">{language === "es" ? "Correo Electrónico:" : "Email:"}</td>
-            <td className="border px-4 py-2">{cliente.correo}</td>
-          </tr>
-          <tr>
-            <td className="border px-4 py-2 font-bold">{language === "es" ? "Teléfono:" : "Phone:"}</td>
-            <td className="border px-4 py-2">{cliente.telefono}</td>
-          </tr>
-          <tr>
-            <td className="border px-4 py-2 font-bold">{language === "es" ? "Dirección:" : "Address:"}</td>
-            <td className="border px-4 py-2">{cliente.direccion}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="bg-title bg-[#305832] text-white font-bold">{t.clientInfo}</div>
+      <table className="w-full mb-2 border page-section">
+  <tbody>
+    <tr>
+      <td className="border px-2 py-1 font-bold">{language === "es" ? "Nombre:" : "Name:"}</td>
+      <td className="border px-2 py-1">{formatValue(cliente.nombre || cliente.nombreCompleto)}</td>
+    </tr>
+    <tr>
+      <td className="border px-2 py-1 font-bold">{language === "es" ? "Correo Electrónico:" : "Email:"}</td>
+      <td className="border px-2 py-1">{formatValue(cliente.correo)}</td>
+    </tr>
+    <tr>
+      <td className="border px-2 py-1 font-bold">{language === "es" ? "Teléfono:" : "Phone:"}</td>
+      <td className="border px-2 py-1">{formatValue(cliente.telefono)}</td>
+    </tr>
+    <tr>
+      <td className="border px-2 py-1 font-bold">{language === "es" ? "Dirección:" : "Address:"}</td>
+      <td className="border px-2 py-1">{formatValue(cliente.direccion)}</td>
+    </tr>
+  </tbody>
+</table>
+
 
       {/* Características del Plan */}
-      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.planFeatures}</div>
-      <ul className="list-disc ml-6 mb-4 page-section">
-        {uniqueFeatures.map((feature, index) => (
-          <li key={index}>{feature}</li>
-        ))}
-      </ul>
+      {tipoPlan !== "servicios-adicionales" && (
+        <>
+          <div className="bg-title bg-[#305832] text-white font-bold">{t.planFeatures}</div>
+          <ul className="list-disc ml-4 mb-2 page-section">
+            {uniqueFeatures.map((feature, index) => (
+              <li key={index}>{feature}</li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {/* Especificaciones Adicionales */}
-      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.additionalDetails}</div>
-      <table className="w-full mb-4 border page-section">
-        <tbody>
-          <tr>
-            <td className="border px-4 py-2">{t.payrollManagement}:</td>
-            <td className="border px-4 py-2">{colaboradores > 0 ? t.yes : t.no}</td>
-          </tr>
-          <tr>
-            <td className="border px-4 py-2">{t.employees}:</td>
-            <td className="border px-4 py-2">{colaboradores}</td>
-          </tr>
-          {formData.facturas && (
-            <>
-              <tr>
-                <td className="border px-4 py-2">{t.issuedInvoices}:</td>
-                <td className="border px-4 py-2">{facturasEmitidas || 0}</td>
-              </tr>
-              <tr>
-                <td className="border px-4 py-2">{t.receivedInvoices}:</td>
-                <td className="border px-4 py-2">{facturasRecibidas || 0}</td>
-              </tr>
-            </>
-          )}
-          <tr>
-            <td className="border px-4 py-2">{t.transactions}:</td>
-            <td className="border px-4 py-2">{transacciones || 0}</td>
-          </tr>
-        </tbody>
-      </table>
+      {tipoPlan !== "servicios-adicionales" && (
+  <>
+          <div className="bg-title bg-[#305832] text-white font-bold">{t.additionalDetails}</div>
+    <table className="w-full mb-2 border page-section">
+      <tbody>
+        <tr>
+          <td className="border px-2 py-1">{t.payrollManagement}:</td>
+          <td className="border px-2 py-1">{formatValue(colaboradores > 0 ? t.yes : t.no)}</td>
+        </tr>
+        <tr>
+          <td className="border px-2 py-1">{t.employees}:</td>
+          <td className="border px-2 py-1">{formatValue(colaboradores)}</td>
+        </tr>
+        {formData.facturas && (
+          <>
+            <tr>
+              <td className="border px-2 py-1">{t.issuedInvoices}:</td>
+              <td className="border px-2 py-1">{formatValue(facturasEmitidas)}</td>
+            </tr>
+            <tr>
+              <td className="border px-2 py-1">{t.receivedInvoices}:</td>
+              <td className="border px-2 py-1">{formatValue(facturasRecibidas)}</td>
+            </tr>
+          </>
+        )}
+        <tr>
+          <td className="border px-2 py-1">{t.transactions}:</td>
+          <td className="border px-2 py-1">{formatValue(transacciones)}</td>
+        </tr>
+      </tbody>
+    </table>
+    </>
+)}
 
       {/* Características Extras */}
       {extraFeatures.length > 0 && (
         <>
-          <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.extraFeatures}</div>
+          <div className="bg-[#305832] text-white px-2 py-1 font-bold">{t.extraFeatures}</div>
           <table className="w-full mb-4 border page-section">
             <thead>
               <tr>
-                <th className="border px-4 py-2">{language === "es" ? "Descripción" : "Description"}</th>
-                <th className="border px-4 py-2">{language === "es" ? "Valor" : "Value"}</th>
+                <th className="border px-2 py-1">{language === "es" ? "Descripción" : "Description"}</th>
+                <th className="border px-2 py-1">{language === "es" ? "Valor" : "Value"}</th>
               </tr>
             </thead>
             <tbody>
               {extraFeatures.map((feature, index) => (
                 <tr key={index}>
-                  <td className="border px-4 py-2">{feature.name}</td>
-                  <td className="border px-4 py-2">
+                  <td className="border px-2 py-1">{feature.name}</td>
+                  <td className="border px-2 py-1">
                     {currencySymbol}
                     {convertExtraFeature(parseFloat(feature.value)).toLocaleString()}
                   </td>
@@ -242,73 +289,77 @@ const PDFPreview = ({ formData, breakdown }) => {
       <div className="page-break-before"></div>
 
       {/* Desglose de Precios */}
-      <div className="bg-[#305832] text-white px-4 py-1 font-bold">{t.priceBreakdown}</div>
-      <table className="w-full mb-4 border page-section">
-        <thead>
-          <tr>
-            <th className="border px-4 py-2">{language === "es" ? "Descripción" : "Description"}</th>
-            <th className="border px-4 py-2">{language === "es" ? "Monto" : "Amount"}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className="border px-4 py-2">{t.planCost}</td>
-            <td className="border px-4 py-2">{currencySymbol}{breakdown.planBase.toLocaleString()}</td>
-          </tr>
-          <tr>
-            <td className="border px-4 py-2">{t.payrollCost}</td>
-            <td className="border px-4 py-2">{currencySymbol}{breakdown.colaboradores?.toLocaleString()}</td>
-          </tr>
-          {breakdown.facturas > 0 && (
-            <tr>
-              <td className="border px-4 py-2">{t.invoiceCost}</td>
-              <td className="border px-4 py-2">{currencySymbol}{breakdown.facturas.toLocaleString()}</td>
-            </tr>
-          )}
-          {breakdown.transacciones > 0 && (
-            <tr>
-              <td className="border px-4 py-2">{t.transactionCost}</td>
-              <td className="border px-4 py-2">{currencySymbol}{breakdown.transacciones.toLocaleString()}</td>
-            </tr>
-          )}
-          {breakdown.extraFeatures > 0 && (
-            <tr>
-              <td className="border px-4 py-2">{t.extraFeatureCost}</td>
-              <td className="border px-4 py-2">{currencySymbol}{breakdown.extraFeatures.toLocaleString()}</td>
-            </tr>
-          )}
-          {breakdown.discount > 0 && (
-            <tr>
-              <td className="border px-4 py-2">{t.discount}</td>
-              <td className="border px-4 py-2">-{currencySymbol}{breakdown.discount.toLocaleString()}</td>
-            </tr>
-          )}
-          <tr>
-            <td className="border px-4 py-2 font-bold">{t.totalCost}</td>
-            <td className="border px-4 py-2 font-bold">{currencySymbol}{breakdown.totalCost.toLocaleString()}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="bg-title bg-[#305832] text-white px-2 py-1 font-bold">{t.priceBreakdown}</div>
+<table className="w-full mb-4 border page-section">
+  <thead>
+    <tr>
+      <th className="border px-2 py-1">{language === "es" ? "Descripción" : "Description"}</th>
+      <th className="border px-2 py-1">{language === "es" ? "Monto" : "Amount"}</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td className="border px-2 py-1">{t.planCost}</td>
+      <td className="border px-2 py-1">{formatValueDesgloce(breakdown.planBase, currencySymbol)}</td>
+    </tr>
+    <tr>
+      <td className="border px-2 py-1">{t.payrollCost}</td>
+      <td className="border px-2 py-1">{formatValueDesgloce(breakdown.colaboradores, currencySymbol)}</td>
+    </tr>
+    {breakdown.facturas > 0 && (
+      <tr>
+        <td className="border px-2 py-1">{t.invoiceCost}</td>
+        <td className="border px-2 py-1">{formatValueDesgloce(breakdown.facturas, currencySymbol)}</td>
+      </tr>
+    )}
+    {breakdown.transacciones > 0 && (
+      <tr>
+        <td className="border px-2 py-1">{t.transactionCost}</td>
+        <td className="border px-2 py-1">{formatValueDesgloce(breakdown.transacciones, currencySymbol)}</td>
+      </tr>
+    )}
+    {breakdown.extraFeatures > 0 && (
+      <tr>
+        <td className="border px-2 py-1">{t.extraFeatureCost}</td>
+        <td className="border px-2 py-1">{formatValueDesgloce(breakdown.extraFeatures, currencySymbol)}</td>
+      </tr>
+    )}
+    {breakdown.discount > 0 && (
+      <tr>
+        <td className="border px-2 py-1">{t.discount}</td>
+        <td className="border px-2 py-1">-{formatValueDesgloce(breakdown.discount, currencySymbol)}</td>
+      </tr>
+    )}
+    <tr>
+      <td className="border px-2 py-1 font-bold">{t.totalCost}</td>
+      <td className="border px-2 py-1 font-bold">{formatValueDesgloce(breakdown.totalCost, currencySymbol)}</td>
+    </tr>
+  </tbody>
+</table>
+
 
       {/* Footer */}
-      <div className="text-sm mt-6 page-section">
+      <div className="text-xs mt-4 page-section">
         <p>{t.notes}</p>
         <p className="mt-2 font-semibold">{t.observation}</p>
         <p className="mt-2">{t.importantNote}</p>
       </div>
 
-      <div className="flex justify-between items-center mt-6 page-section">
-        <div className="text-sm">
-          <p>JRC Consulting Group</p>
+      <div className="flex justify-end items-center mt-4 page-section gap-2">
+        <div className="text-xs text-right">
+          <p>
+            JRC Consulting Group ® <span>&copy;</span>
+          </p>
         </div>
         <div>
-          <img src="/pyme_costa_rica_image.png" alt="PYME Logo" className="h-12" />
+          <img src="/pyme.svg" alt="Logo PYME" style={{ width: "auto", height: "56px" }} />
         </div>
       </div>
 
+
       <button
         onClick={handleDownloadPDF}
-        className="mt-4 py-2 px-4 bg-[#305832] text-white rounded hover:bg-green-700 print-hidden"
+        className="mt-4 py-1 px-2 bg-[#305832] text-white rounded hover:bg-green-700 print-hidden"
       >
         {t.downloadPDF}
       </button>

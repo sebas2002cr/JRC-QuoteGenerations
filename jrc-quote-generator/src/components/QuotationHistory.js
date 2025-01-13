@@ -213,16 +213,17 @@ const handlePermanentDelete = async (id) => {
 
   useEffect(() => {
     let filtered = quotations;
-
+  
     // Filtro por búsqueda de cliente
     if (searchTerm) {
       filtered = filtered.filter((quotation) =>
         `${quotation.cliente?.nombre || ""} ${quotation.cliente?.apellido || ""}`
           .toLowerCase()
-          .includes(searchTerm.toLowerCase())
+          .includes(searchTerm.toLowerCase()) ||
+        `${quotation.cotizacionNumber || ""}`.includes(searchTerm) // Filtro por número de cotización
       );
     }
-
+  
     // Filtro por plan seleccionado
     if (selectedPlan) {
       filtered = filtered.filter(
@@ -231,28 +232,28 @@ const handlePermanentDelete = async (id) => {
           (selectedPlan === "personalizado" && quotation.tipoPlan === "personalizado")
       );
     }
-    
-
+  
     // Filtro por nombre de usuario
     if (selectedUserName) {
       filtered = filtered.filter((quotation) =>
         (quotation.user?.fullName || "").toLowerCase().includes(selectedUserName.toLowerCase())
       );
     }
-
+  
     // Filtro por rango de fechas
     if (startDate || endDate) {
       filtered = filtered.filter((quotation) => {
         const date = new Date(quotation.createdAt._seconds * 1000);
         const start = startDate ? new Date(startDate) : null;
         const end = endDate ? new Date(endDate) : null;
-
+  
         return (!start || date >= start) && (!end || date <= end);
       });
     }
-
+  
     setFilteredQuotations(filtered);
   }, [searchTerm, selectedPlan, selectedUserName, startDate, endDate, quotations]);
+  
 
   const formatDate = (timestamp) => {
     if (timestamp && timestamp._seconds) {
@@ -283,39 +284,28 @@ const handlePermanentDelete = async (id) => {
 
 
       {/* Filtros */}
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Búsqueda */}
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Búsqueda por cliente */}
         <input
           type="text"
-          placeholder="Buscar por nombre del cliente..."
+          placeholder="Buscar por nombre o # de cotización..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#305832]"
         />
-        {/* Filtro por plan */}
-        <select
-          value={selectedPlan}
-          onChange={(e) => setSelectedPlan(e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#305832]"
-        >
-          <option value="">Todos los planes</option>
-          <option value="starter">Starter</option>
-          <option value="professional">Professional</option>
-          <option value="full-compliance">Full Compliance</option>
-          <option value="personalizado">Personalizado</option>
-        </select>
+
         {/* Filtro por nombre de usuario */}
         {isAdmin && (
           <input
             type="text"
-            placeholder="Buscar por nombre de usuario..."
+            placeholder="Buscar por nombre de usuario creador..."
             value={selectedUserName}
             onChange={(e) => setSelectedUserName(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#305832]"
           />
         )}
-        
       </div>
+
 
       {/* Tabla de cotizaciones */}
       <div className="overflow-x-auto">
@@ -324,8 +314,7 @@ const handlePermanentDelete = async (id) => {
           <tr className="bg-gray-100">
             <th className="border border-gray-300 px-4 py-2 text-left">Cliente</th>
             <th className="border border-gray-300 px-4 py-2 text-left">Fecha</th>
-            <th className="border border-gray-300 px-4 py-2 text-left">Plan</th>
-            {/* Aquí se cambia dinámicamente el encabezado */}
+            <th className="border border-gray-300 px-4 py-2 text-left"># de Cotización</th> {/* Cambiado */}
             <th className="border border-gray-300 px-4 py-2 text-left">
               {isDeletedView ? "Eliminado por" : "Creado por"}
             </th>
@@ -335,79 +324,73 @@ const handlePermanentDelete = async (id) => {
             )}
           </tr>
         </thead>
-          <tbody>
-            {filteredQuotations.map((quotation) => (
-              <tr
-                key={quotation.id}
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => openEditModal(quotation)}
-              >
-                <td className="border border-gray-300 px-4 py-2">
-                  {quotation.cliente?.nombre || "Desconocido"} {quotation.cliente?.apellido || ""}
-                </td>
-                <td className="border border-gray-300 px-4 py-2">
-                  {formatDate(quotation.createdAt)}
-                </td>
-                <td className="border border-gray-300 px-4 py-2">
-                  {quotation.tipoPlan === "personalizado"
-                    ? formatPlanName("personalizado")
-                    : formatPlanName(quotation.planSeleccionado)}
-                </td>
-                <td className="border border-gray-300 px-4 py-2">
+        <tbody>
+          {filteredQuotations.map((quotation) => (
+            <tr
+              key={quotation.id}
+              className="hover:bg-gray-50 cursor-pointer"
+              onClick={() => openEditModal(quotation)}
+            >
+              <td className="border border-gray-300 px-4 py-2">
+                {quotation.cliente?.nombre ||quotation.cliente?.nombreCompleto || "Desconocido"} {quotation.cliente?.apellido || ""}
+              </td>
+              <td className="border border-gray-300 px-4 py-2">
+                {formatDate(quotation.createdAt)}
+              </td>
+              <td className="border border-gray-300 px-4 py-2">
+                {quotation.cotizacionNumber || "N/A"} {/* Mostrando # de Cotización */}
+              </td>
+              <td className="border border-gray-300 px-4 py-2">
                 {isDeletedView
-                  ? quotation.deletedBy || "Desconocido" // Muestra "Eliminado por"
+                  ? quotation.deletedBy || "Desconocido"
                   : quotation.user?.fullName || "Usuario desconocido"}
               </td>
-
-                <td className="border border-gray-300 px-4 py-2">
-                  {quotation.tipoMoneda === "USD"
-                    ? `$${quotation.totalCost?.toFixed(2)}`
-                    : `₡${parseInt(quotation.totalCost || 0).toLocaleString()}`}
-                </td>
-                {isAdmin && (
-                  <td className="border border-gray-300 px-4 py-2 text-center">
-                    {isDeletedView ? (
-                      <div className="flex gap-2">
-                        {/* Botón para reestablecer */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRestore(quotation.id);
-                          }}
-                          className="px-2 py-1 border border-[#305832] text-[#305832] rounded-lg hover:bg-gray-200 text-sm"
-                        >
-                          Reestablecer
-                        </button>
-
-                        {/* Botón para eliminar definitivamente */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePermanentDelete(quotation.id);
-                          }}
-                          className="px-2 py-1 border border-red-500 text-red-500 rounded-lg hover:bg-red-100 text-sm"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    ) : (
+              <td className="border border-gray-300 px-4 py-2">
+                {quotation.tipoMoneda === "USD"
+                  ? `$${quotation.totalCost?.toFixed(2)}`
+                  : `₡${parseInt(quotation.totalCost || 0).toLocaleString()}`}
+              </td>
+              {isAdmin && (
+                <td className="border border-gray-300 px-4 py-2 text-center">
+                  {isDeletedView ? (
+                    <div className="flex gap-2">
+                      {/* Botón para reestablecer */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(quotation.id);
+                          handleRestore(quotation.id);
+                        }}
+                        className="px-2 py-1 border border-[#305832] text-[#305832] rounded-lg hover:bg-gray-200 text-sm"
+                      >
+                        Reestablecer
+                      </button>
+                      {/* Botón para eliminar definitivamente */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePermanentDelete(quotation.id);
                         }}
                         className="px-2 py-1 border border-red-500 text-red-500 rounded-lg hover:bg-red-100 text-sm"
                       >
                         Eliminar
                       </button>
-                    )}
-                  </td>
-                )}
-
-
-              </tr>
-            ))}
-          </tbody>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(quotation.id);
+                      }}
+                      className="px-2 py-1 border border-red-500 text-red-500 rounded-lg hover:bg-red-100 text-sm"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
         </table>
       </div>
 

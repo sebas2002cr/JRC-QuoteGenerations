@@ -33,8 +33,7 @@ export default function FormCotizacion({
     idiomaCotizacion: "Español",
     tipoCambio: "",
     cliente: {
-      nombre: "",
-      apellido: "",
+      nombreCompleto: "",
       cedula: "",
       correo: "",
       telefono: "",
@@ -45,6 +44,9 @@ export default function FormCotizacion({
   useEffect(() => {
     setBreakdown(calculateTotalCost());
   }, [formData]);
+  const createdAt = initialData?.createdAt
+  ? new Date(initialData.createdAt._seconds * 1000)
+  : null;
 
     // Cargar los datos iniciales si existen
     useEffect(() => {
@@ -52,11 +54,17 @@ export default function FormCotizacion({
         setFormData({
           ...formData,
           ...initialData,
-          cliente: { ...formData.cliente, ...initialData.cliente },
+          cliente: { ...formData.cliente, ...initialData.cliente, nombreCompleto: `${initialData.cliente?.nombre || initialData.cliente?.nombreCompleto ||""} ${initialData.cliente?.apellido || ""}`.trim(), },
           featuresSeleccionadas: initialData.featuresSeleccionadas || [],
+          fechaCreacion: initialData.createdAt
+  ? new Date(initialData.createdAt._seconds * 1000)
+  : new Date(),
+          cotizacionNumer: initialData.cotizacionNumer || null,
         });
       }
     }, [initialData]);
+    
+    
     
 
     const handleInputChange = (e) => {
@@ -85,27 +93,29 @@ export default function FormCotizacion({
       if (formData.tipoPlan === "predefinido" && formData.planSeleccionado) {
         breakdown.planBase = planPrices[formData.planSeleccionado] || 0;
         totalCost += breakdown.planBase;
-      } else if (formData.tipoPlan === "personalizado") {
+      } else if (formData.tipoPlan === "personalizado" || formData.tipoPlan === "servicios-adicionales") {
         const basePrice = parseFloat(formData.precioBase || 0); // Asegurar que sea un número
         breakdown.planBase = basePrice;
         totalCost += basePrice;
       }
     
       // **Colaboradores**
-      if (formData.planSeleccionado === "full-compliance") {
-        const colaboradoresExtra =
-          parseInt(formData.colaboradores || 0) > 5
-            ? parseInt(formData.colaboradores) - 5
-            : 0;
-        breakdown.colaboradores = colaboradoresExtra * 10000 * (1 + IVA);
-        totalCost += breakdown.colaboradores;
-      } else if (formData.manejoPlanilla) {
-        breakdown.colaboradores = parseInt(formData.colaboradores || 0) * 10000 * (1 + IVA);
-        totalCost += breakdown.colaboradores;
+      if (formData.tipoPlan !== "servicios-adicionales") {
+        if (formData.planSeleccionado === "full-compliance") {
+          const colaboradoresExtra =
+            parseInt(formData.colaboradores || 0) > 5
+              ? parseInt(formData.colaboradores) - 5
+              : 0;
+          breakdown.colaboradores = colaboradoresExtra * 10000 * (1 + IVA);
+          totalCost += breakdown.colaboradores;
+        } else if (formData.manejoPlanilla) {
+          breakdown.colaboradores = parseInt(formData.colaboradores || 0) * 10000 * (1 + IVA);
+          totalCost += breakdown.colaboradores;
+        }
       }
     
       // **Facturas Emitidas**
-      if (formData.facturas && formData.facturasEmitidas) {
+      if (formData.tipoPlan !== "servicios-adicionales" && formData.facturas && formData.facturasEmitidas) {
         const facturasEmitidas = parseInt(formData.facturasEmitidas || 0);
         if (facturasEmitidas <= 10) {
           breakdown.facturas = 10000 * (1 + IVA);
@@ -123,7 +133,7 @@ export default function FormCotizacion({
       }
     
       // **Transacciones**
-      if (formData.transacciones && parseInt(formData.transacciones) > 50) {
+      if (formData.tipoPlan !== "servicios-adicionales" && formData.transacciones && parseInt(formData.transacciones) > 50) {
         breakdown.transacciones =
           (parseInt(formData.transacciones) - 50) * 1000 * (1 + IVA);
         totalCost += breakdown.transacciones;
@@ -146,7 +156,7 @@ export default function FormCotizacion({
         breakdown.discount = discount; // Descuento fijo
       }
       totalCost -= breakdown.discount;
-
+    
       breakdown.totalCost = totalCost;
     
       // **Conversión a dólares si aplica**
@@ -162,6 +172,7 @@ export default function FormCotizacion({
     
       return breakdown;
     };
+    
     
     
     
@@ -297,9 +308,12 @@ export default function FormCotizacion({
       const breakdown = calculateTotalCost();
       const totalCost = breakdown.totalCost;
   
+      // Datos de la cotización que se enviarán al backend
       const quotationData = {
         ...formData,
+        tipoPlan: formData.tipoPlan, // Asegurar que tipoPlan esté incluido
         totalCost,
+        createdAt: new Date(),
         user: {
           email: localStorage.getItem("user")
             ? JSON.parse(localStorage.getItem("user")).email
@@ -341,6 +355,7 @@ export default function FormCotizacion({
       });
     }
   };
+  
   
   
   
@@ -482,26 +497,23 @@ export default function FormCotizacion({
 <div className="mb-8 p-6 bg-white rounded-lg shadow-inner border border-gray-200">
   <h2 className="text-2xl font-bold mb-6 text-gray-800">Información del Cliente</h2>
   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-    <div>
-      <label className="block text-gray-700 font-medium mb-1">Nombre</label>
+    {/* Nombre Completo */}
+    <div className="mb-6">
+      <label className="block text-gray-700 font-medium mb-1">Nombre Completo</label>
       <input
         type="text"
-        name="nombre"
-        value={formData.cliente.nombre}
-        onChange={handleClientChange}
-        placeholder="Ingrese el nombre"
-        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
-        required
-      />
-    </div>
-    <div>
-      <label className="block text-gray-700 font-medium mb-1">Apellido</label>
-      <input
-        type="text"
-        name="apellido"
-        value={formData.cliente.apellido}
-        onChange={handleClientChange}
-        placeholder="Ingrese el apellido"
+        name="nombreCompleto"
+        value={formData.cliente.nombreCompleto}
+        onChange={(e) =>
+          setFormData((prevState) => ({
+            ...prevState,
+            cliente: {
+              ...prevState.cliente,
+              nombreCompleto: e.target.value,
+            },
+          }))
+        }
+        placeholder="Ingrese el nombre completo"
         className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
         required
       />
@@ -575,6 +587,7 @@ export default function FormCotizacion({
         <option value="">Seleccione una opción</option>
         <option value="predefinido">Plan Predefinido</option>
         <option value="personalizado">Plan Personalizado</option>
+        <option value="servicios-adicionales">Servicios Adicionales</option> 
       </select>
     </div>
 
@@ -720,6 +733,8 @@ export default function FormCotizacion({
           </select>
         </div>
 
+      {/* Manejo de planilla */}
+      {formData.tipoPlan !== "servicios-adicionales" && (
         <div className="mb-4">
           <label className="flex items-center">
             <input
@@ -734,7 +749,6 @@ export default function FormCotizacion({
             ¿Ocupa manejo de planilla?
           </label>
           {formData.manejoPlanilla && (
-            
             <input
               type="number"
               name="colaboradores"
@@ -748,7 +762,10 @@ export default function FormCotizacion({
             />
           )}
         </div>
+      )}
 
+      {/* Facturas */}
+      {formData.tipoPlan !== "servicios-adicionales" && (
         <div className="mb-4">
           <label className="flex items-center">
             <input
@@ -789,7 +806,10 @@ export default function FormCotizacion({
             </div>
           )}
         </div>
+        )}
 
+      {/* Facturas */}
+      {formData.tipoPlan !== "servicios-adicionales" && (
         <div className="mb-4">
         <label className="block text-gray-700 font-medium mb-2">
           ¿Cuántas transacciones se hacen al mes?
@@ -805,6 +825,75 @@ export default function FormCotizacion({
           className="w-full border rounded-md p-2"
         />
       </div>
+      )}
+
+      {formData.tipoPlan === "servicios-adicionales" && (
+  <>
+    {/* Precio base */}
+    <div className="mb-6">
+      <label className="block text-gray-700 font-medium mb-2">
+        Precio base de los servicios adicionales (en colones)
+      </label>
+      <input
+        type="text"
+        name="precioBase"
+        value={formData.precioBase}
+        onChange={(e) =>
+          setFormData({
+            ...formData,
+            precioBase: e.target.value.replace(/[^\d.]/g, ""), // Aceptar solo números
+          })
+        }
+        placeholder="Ingrese el precio base"
+        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
+        required
+      />
+    </div>
+
+    {/* Agregar características extra */}
+    <div className="mb-4">
+      <button
+        type="button"
+        onClick={handleAddExtraFeature}
+        className="py-2 px-4 bg-white border border-[#305832] text-[#305832] rounded-md hover:bg-gray-100"
+      >
+        Agregar Característica Extra
+      </button>
+      {formData.extraFeatures.map((feature, index) => (
+        <div key={index} className="flex items-center gap-2 mt-2">
+          <textarea
+            placeholder="Descripción detallada de la característica"
+            value={feature.name}
+            onChange={(e) =>
+              handleExtraFeatureChange(index, "name", e.target.value)
+            }
+            className="w-2/3 border rounded-md p-2 resize-none"
+            rows="3"
+            required
+          ></textarea>
+          <input
+            type="text"
+            placeholder="Valor en colones"
+            value={feature.value}
+            onChange={(e) =>
+              handleExtraFeatureChange(index, "value", e.target.value)
+            }
+            className="w-1/3 border rounded-md p-2 text-right"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => handleRemoveExtraFeature(index)}
+            className="text-red-500 hover:text-red-700"
+          >
+            Eliminar
+          </button>
+        </div>
+      ))}
+    </div>
+  </>
+)}
+
 
 
 {/* Desglose del costo */}
