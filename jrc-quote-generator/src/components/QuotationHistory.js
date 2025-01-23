@@ -314,10 +314,8 @@ const handlePermanentDelete = async (id) => {
           <tr className="bg-gray-100">
             <th className="border border-gray-300 px-4 py-2 text-left">Cliente</th>
             <th className="border border-gray-300 px-4 py-2 text-left">Fecha</th>
-            <th className="border border-gray-300 px-4 py-2 text-left"># de Cotización</th> {/* Cambiado */}
-            <th className="border border-gray-300 px-4 py-2 text-left">
-              {isDeletedView ? "Eliminado por" : "Creado por"}
-            </th>
+            <th className="border border-gray-300 px-4 py-2 text-left"># de Cotización</th>
+            <th className="border border-gray-300 px-4 py-2 text-left">{isDeletedView ? "Eliminado por" : "Creado por"}</th>
             <th className="border border-gray-300 px-4 py-2 text-left">Total</th>
             {isAdmin && (
               <th className="border border-gray-300 px-4 py-2 text-left">Acciones</th>

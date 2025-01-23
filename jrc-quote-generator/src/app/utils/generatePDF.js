@@ -3,12 +3,13 @@ import html2pdf from "html2pdf.js";
 
 const PDFPreview = ({ formData, breakdown }) => {
   const uniqueFeatures = [...new Set(formData.featuresSeleccionadas)];
+  
 
   const translations = {
     es: {
       title: (tipoPlan, planSeleccionado, nombreCliente) => {
         if (tipoPlan === "servicios-adicionales") {
-          return `Servicios Adicionales - ${nombreCliente}`;
+          return `${formatValue(nombrePlan)} - ${nombreCliente}`;
         }
         return tipoPlan === "predefinido"
           ? `Plan ${planSeleccionado} - ${nombreCliente}`
@@ -43,7 +44,7 @@ const PDFPreview = ({ formData, breakdown }) => {
     en: {
       title: (tipoPlan, planSeleccionado, nombreCliente) => {
         if (tipoPlan === "servicios-adicionales") {
-          return `Additional Services - ${nombreCliente}`;
+          return `${formatValue(nombrePlan)} - ${nombreCliente}`;
         }
         return tipoPlan === "predefinido"
           ? `${planSeleccionado} Plan - ${nombreCliente}`
@@ -80,6 +81,7 @@ const PDFPreview = ({ formData, breakdown }) => {
   const {
     cliente,
     tipoPlan,
+    nombrePlan,
     planSeleccionado,
     extraFeatures,
     tipoMoneda,
@@ -93,6 +95,7 @@ const PDFPreview = ({ formData, breakdown }) => {
 
   const language = formData.idiomaCotizacion === "ingles" ? "en" : "es";
   const t = translations[language];
+  const shouldShowAdditionalDetails = colaboradores > 0 || transacciones > 0;
 
   const handleDownloadPDF = () => {
     const button = document.querySelector(".print-hidden");
@@ -102,7 +105,7 @@ const PDFPreview = ({ formData, breakdown }) => {
 
     const opt = {
       margin: 1,
-      filename: `Cotizacion-${tipoPlan}-${cliente.nombre.replace(/\s+/g, "_")}.pdf`,
+      filename: `Cotizacion-${tipoPlan}-${cliente?.nombreCompleto?.replace(/\s+/g, "_") || "Cliente_Desconocido"}.pdf`,
       image: { type: "jpeg", quality: 1 },
       html2canvas: { scale: 3 },
       jsPDF: { unit: "pt", format: "letter", orientation: "portrait" },
@@ -225,7 +228,7 @@ const PDFPreview = ({ formData, breakdown }) => {
       )}
 
       {/* Especificaciones Adicionales */}
-      {tipoPlan !== "servicios-adicionales" && (
+      {tipoPlan !== "servicios-adicionales" && shouldShowAdditionalDetails && (
   <>
           <div className="bg-title bg-[#305832] text-white font-bold">{t.additionalDetails}</div>
     <table className="w-full mb-2 border page-section">

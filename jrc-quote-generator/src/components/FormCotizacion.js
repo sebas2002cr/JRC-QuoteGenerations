@@ -19,6 +19,7 @@ export default function FormCotizacion({
   const [formData, setFormData] = useState({
     tipoPlan: "",
     planSeleccionado: "",
+    nombrePlan: "",
     featuresSeleccionadas: [],
     extraFeatures: [],
     precioBase: "",
@@ -60,6 +61,7 @@ export default function FormCotizacion({
   ? new Date(initialData.createdAt._seconds * 1000)
   : new Date(),
           cotizacionNumer: initialData.cotizacionNumer || null,
+          nombrePlan: initialData.nombrePlan || null,
         });
       }
     }, [initialData]);
@@ -829,6 +831,20 @@ export default function FormCotizacion({
 
       {formData.tipoPlan === "servicios-adicionales" && (
   <>
+  <div className="mb-6">
+    <label className="block text-gray-700 font-medium mb-2">
+      Nombre del Servicio Adicional
+    </label>
+    <input
+      type="text"
+      name="nombrePlan"
+      value={formData.nombrePlan}
+      onChange={(e) => setFormData({ ...formData, nombrePlan: e.target.value })}
+      placeholder="Ingrese el nombre del servicio"
+      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
+      required
+    />
+  </div>
     {/* Precio base */}
     <div className="mb-6">
       <label className="block text-gray-700 font-medium mb-2">
