@@ -291,8 +291,8 @@ const PDFPreview = ({ formData, breakdown }) => {
       {/* Forzar un salto de página después */}
       <div className="page-break-before"></div>
 
-      {/* Desglose de Precios */}
-      <div className="bg-title bg-[#305832] text-white px-2 py-1 font-bold">{t.priceBreakdown}</div>
+{/* Desglose de Precios */}
+<div className="bg-title bg-[#305832] text-white px-2 py-1 font-bold">{t.priceBreakdown}</div>
 <table className="w-full mb-4 border page-section">
   <thead>
     <tr>
@@ -301,14 +301,18 @@ const PDFPreview = ({ formData, breakdown }) => {
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <td className="border px-2 py-1">{t.planCost}</td>
-      <td className="border px-2 py-1">{formatValueDesgloce(breakdown.planBase, currencySymbol)}</td>
-    </tr>
-    <tr>
-      <td className="border px-2 py-1">{t.payrollCost}</td>
-      <td className="border px-2 py-1">{formatValueDesgloce(breakdown.colaboradores, currencySymbol)}</td>
-    </tr>
+    {tipoPlan !== "servicios-adicionales" && (
+      <tr>
+        <td className="border px-2 py-1">{t.planCost}</td>
+        <td className="border px-2 py-1">{formatValueDesgloce(breakdown.planBase, currencySymbol)}</td>
+      </tr>
+    )}
+    {tipoPlan !== "servicios-adicionales" && (
+      <tr>
+        <td className="border px-2 py-1">{t.payrollCost}</td>
+        <td className="border px-2 py-1">{formatValueDesgloce(breakdown.colaboradores, currencySymbol)}</td>
+      </tr>
+    )}
     {breakdown.facturas > 0 && (
       <tr>
         <td className="border px-2 py-1">{t.invoiceCost}</td>
@@ -339,6 +343,7 @@ const PDFPreview = ({ formData, breakdown }) => {
     </tr>
   </tbody>
 </table>
+
 
 
       {/* Footer */}
