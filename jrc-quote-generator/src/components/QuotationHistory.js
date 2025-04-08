@@ -188,11 +188,13 @@ const handlePermanentDelete = async (id) => {
         const data = await response.json();
   
         if (response.ok) {
-          const filteredData = isAdmin
+          const filteredData = (isAdmin
             ? data.quotations
             : data.quotations.filter(
                 (quotation) => quotation.user?.email === currentUserEmail
-              );
+              )
+          ).sort((a, b) => (b.cotizacionNumber || 0) - (a.cotizacionNumber || 0));
+          
   
           setQuotations(filteredData);
           setFilteredQuotations(filteredData);

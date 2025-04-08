@@ -7,13 +7,16 @@ const PDFPreview = ({ formData, breakdown }) => {
 
   const translations = {
     es: {
-      title: (tipoPlan, planSeleccionado, nombreCliente) => {
+      title: (tipoPlan, planSeleccionado, nombreCliente, nombrePlan) => {
+        const planLabel = (value) => value ? formatValue(value) : "Personalizado";
+      
         if (tipoPlan === "servicios-adicionales") {
-          return `${formatValue(nombrePlan)} - ${nombreCliente}`;
+          return `${planLabel(nombrePlan)} - ${nombreCliente}`;
         }
+      
         return tipoPlan === "predefinido"
           ? `Plan ${planSeleccionado} - ${nombreCliente}`
-          : `Plan Personalizado - ${nombreCliente}`;
+          : `${planLabel(nombrePlan)} - ${nombreCliente}`;
       },
       clientInfo: "Información del Cliente",
       planFeatures: "Características del Plan",
@@ -208,8 +211,8 @@ const PDFPreview = ({ formData, breakdown }) => {
       <td className="border px-2 py-1">{formatValue(cliente.telefono)}</td>
     </tr>
     <tr>
-      <td className="border px-2 py-1 font-bold">{language === "es" ? "Dirección:" : "Address:"}</td>
-      <td className="border px-2 py-1">{formatValue(cliente.direccion)}</td>
+      <td className="border px-2 py-1 font-bold">{language === "es" ? "Cédula:" : "Personal Id:"}</td>
+      <td className="border px-2 py-1">{formatValue(cliente.cedula)}</td>
     </tr>
   </tbody>
 </table>
@@ -237,10 +240,13 @@ const PDFPreview = ({ formData, breakdown }) => {
           <td className="border px-2 py-1">{t.payrollManagement}:</td>
           <td className="border px-2 py-1">{formatValue(colaboradores > 0 ? t.yes : t.no)}</td>
         </tr>
-        <tr>
+        {breakdown.colaboradores > 0 && (
+          <tr>
           <td className="border px-2 py-1">{t.employees}:</td>
           <td className="border px-2 py-1">{formatValue(colaboradores)}</td>
         </tr>
+        )}
+        
         {formData.facturas && (
           <>
             <tr>
@@ -307,7 +313,7 @@ const PDFPreview = ({ formData, breakdown }) => {
         <td className="border px-2 py-1">{formatValueDesgloce(breakdown.planBase, currencySymbol)}</td>
       </tr>
     )}
-    {tipoPlan !== "servicios-adicionales" && (
+    { breakdown.colaboradores > 0 && (
       <tr>
         <td className="border px-2 py-1">{t.payrollCost}</td>
         <td className="border px-2 py-1">{formatValueDesgloce(breakdown.colaboradores, currencySymbol)}</td>

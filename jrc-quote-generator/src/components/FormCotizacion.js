@@ -67,6 +67,42 @@ export default function FormCotizacion({
     }, [initialData]);
     
     
+    const handleUpdateQuotationDate = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_URL_API_BACKEND}/api/update-quotation-date/${initialData.id}`,
+          {
+            method : "PUT",
+            headers : {
+              "Content-Type" : "application/json",
+            },
+            body: JSON.stringify({newDate : new Date() }),
+          }
+        );
+        if (response.ok) {
+          showAlert({
+            type: "success",
+            title: "Fecha actualizada",
+            message: "La fecha de la cotización se actualizó exitosamente.",
+          });
+          window.location.reload(); // o puedes actualizar solo el estado
+        } else {
+          const data = await response.json();
+          showAlert({
+            type: "error",
+            title: "Error",
+            message: `Error al actualizar la fecha: ${data.error}`,
+          });
+        }
+
+      } catch (error) {
+        showAlert({
+          type: "error",
+          title: "Error",
+          message: "Error de conexión al actualizar la fecha.",
+        });
+      }
+    }
     
 
     const handleInputChange = (e) => {
@@ -648,6 +684,20 @@ export default function FormCotizacion({
           />
 
         </div>
+        <div className="mb-6">
+        <label className="block text-gray-700 font-medium mb-2">
+          Nombre del Plan
+        </label>
+        <input
+          type="text"
+          name="nombrePlan"
+          value={formData.nombrePlan}
+          onChange={(e) => setFormData({ ...formData, nombrePlan: e.target.value })}
+          placeholder="Ingrese el nombre del servicio"
+          className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#305832] transition duration-200"
+          required
+        />
+      </div>
 
         {/* Características únicas */}
         <div className="mb-6">
@@ -829,11 +879,11 @@ export default function FormCotizacion({
       </div>
       )}
 
-      {formData.tipoPlan === "servicios-adicionales" && (
+      {formData.tipoPlan === "servicios-adicionales"  && (
   <>
   <div className="mb-6">
     <label className="block text-gray-700 font-medium mb-2">
-      Nombre del Servicio Adicional
+      Nombre del Plan
     </label>
     <input
       type="text"
@@ -1075,6 +1125,17 @@ export default function FormCotizacion({
         >
           {isEditMode ? "Guardar Cambios" : "Guardar Cotización"}
         </button>
+       
+       {isEditMode && (
+        <button
+          type="button"
+          onClick={handleUpdateQuotationDate}
+          className="w-full mt-4 py-3 border border-[#81bef3] text-[#467298] font-semibold rounded-lg hover:bg-[#b7d1e9] transition duration-300 ease-in-out"
+        >
+          Actualizar fecha de cotización 
+        </button>
+       )}
+       
         <button
           type="submit"
           className="w-full mt-4 py-3 border border-[#305832] text-[#305832] font-semibold rounded-lg hover:bg-green-100 transition duration-300 ease-in-out"
