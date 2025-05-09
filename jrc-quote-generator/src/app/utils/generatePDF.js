@@ -8,7 +8,7 @@ const PDFPreview = ({ formData, breakdown }) => {
   const translations = {
     es: {
       title: (tipoPlan, planSeleccionado, nombreCliente, nombrePlan) => {
-        const planLabel = (value) => value ? formatValue(value) : "Personalizado";
+        const planLabel = (value) => value ? value : "Personalizado";
       
         if (tipoPlan === "servicios-adicionales") {
           return `${planLabel(nombrePlan)} - ${nombreCliente}`;
@@ -191,7 +191,7 @@ const PDFPreview = ({ formData, breakdown }) => {
 
       {/* Tipo de Plan */}
       <div className="text-xl font-bold mb-2">
-        {t.title(tipoPlan, planSeleccionado, cliente.nombre || cliente.nombreCompleto)}
+        {t.title(tipoPlan, planSeleccionado, cliente.nombre || cliente.nombreCompleto, nombrePlan)}
       </div>
 
       {/* Información del Cliente */}
